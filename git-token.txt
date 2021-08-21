@@ -1,0 +1,24 @@
+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
+sudo apt-get update
+sudo apt-get install python3-pip
+pip install flask
+pip install google
+pip install google-api-python-client
+pip install google_auth_oauthlib
+
+
+1. Open the .bashrc file in your home directory (for example, /home/your-user-name/.bashrc) in a text editor.
+2.Add export PATH="your-dir:$PATH" to the last line of the file, where your-dir is the directory you want to add.
+3. Save the .bashrc file.
+4. Restart your terminal.
+
+nano .bashrc
+export PATH="/Dispatcher-Web/Dispatcher-Web/:$PATH"
+ctrl+X
+sudo reboot 
+
+export FLASK_APP=Dispatcher-Web
+flask run --host=0.0.0.0
+python3 Dispatcher-Web.py
+
+http://34.136.33.201:5000/

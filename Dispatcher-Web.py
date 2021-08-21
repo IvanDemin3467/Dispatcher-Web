@@ -14,7 +14,7 @@
 
 # [START gae_python38_app]
 # [START gae_python3_app]
-from flask import Flask, render_template, request, url_for, flash, redirect
+from flask import Flask, render_template, request, url_for, flash, redirect, session
 import sqlite3
 from werkzeug.exceptions import abort
 
@@ -40,10 +40,20 @@ import google.oauth2.credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from google_auth_oauthlib.flow import InstalledAppFlow
+from google_auth_oauthlib.flow import *
 
 from datetime import datetime
 
 import webbrowser
+
+CLIENT_SECRETS_FILE = "client_secret.json"
+
+# This access scope grants read-only access to the authenticated user's Calendar
+# account.
+SCOPES = ['https://www.googleapis.com/auth/calendar',
+          'https://www.googleapis.com/auth/spreadsheets']
+API_SERVICE_NAME = 'calendar'
+API_VERSION = 'v3'
 
 # periods_dict translates hour of the day into period of the day
 periods_dict = {"08" : 1, "09" : 2, "10" : 2, "11" : 3, "12" : 3, "13" : 4,
@@ -124,6 +134,74 @@ def load_into_spreadsheet(service, list_timetable):
         webbrowser.get(None).open(url)
 
 
+_DEFAULT_AUTH_PROMPT_MESSAGE = (
+    "Please visit this URL to authorize this application: {url}"
+)
+_DEFAULT_WEB_SUCCESS_MESSAGE = (
+    "The authentication flow has completed. You may close this window."
+)
+def run_remote_server(
+    flow,
+    host="localhost",
+    port=8080,
+    authorization_prompt_message=_DEFAULT_AUTH_PROMPT_MESSAGE,
+    success_message=_DEFAULT_WEB_SUCCESS_MESSAGE,
+    open_browser=True,
+    **kwargs
+):
+    """Run the flow using the server strategy.
+
+    The server strategy instructs the user to open the authorization URL in
+    their browser and will attempt to automatically open the URL for them.
+    It will start a local web server to listen for the authorization
+    response. Once authorization is complete the authorization server will
+    redirect the user's browser to the local web server. The web server
+    will get the authorization code from the response and shutdown. The
+    code is then exchanged for a token.
+
+    Args:
+        host (str): The hostname for the local redirect server. This will
+            be served over http, not https.
+        port (int): The port for the local redirect server.
+        authorization_prompt_message (str): The message to display to tell
+            the user to navigate to the authorization URL.
+        success_message (str): The message to display in the web browser
+            the authorization flow is complete.
+        open_browser (bool): Whether or not to open the authorization URL
+            in the user's browser.
+        kwargs: Additional keyword arguments passed through to
+            :meth:`authorization_url`.
+
+    Returns:
+        google.oauth2.credentials.Credentials: The OAuth 2.0 credentials
+            for the user.
+    """
+
+    
+    wsgi_app = _RedirectWSGIApp(success_message)
+    local_server = wsgiref.simple_server.make_server(
+        host, port, wsgi_app, handler_class=_WSGIRequestHandler
+    )
+
+    flow.redirect_uri = "http://{}:{}/".format(host, local_server.server_port)
+    auth_url, _ = flow.authorization_url(**kwargs)
+
+##    if open_browser:
+##        webbrowser.open(auth_url, new=1, autoraise=True)
+    redirect(auth_url)
+
+##    print(authorization_prompt_message.format(url=auth_url))
+
+    local_server.handle_request()
+
+    # Note: using https here because oauthlib is very picky that
+    # OAuth 2.0 should only occur over https.
+    authorization_response = wsgi_app.last_request_uri.replace("http", "https")
+    flow.fetch_token(authorization_response=authorization_response)
+
+    return flow.credentials
+
+
 def get_authenticated_services():
     # The CLIENT_SECRETS_FILE variable specifies the name of a file that contains
     # the OAuth 2.0 information for this application, including its client_id and
@@ -150,7 +228,7 @@ def get_authenticated_services():
     # webbrowser.get(None).open(auth_url)
 
     flash("before credentials")
-    credentials = flow.run_local_server(port=8008)
+    credentials = run_remote_server(flow, host="34.136.33.201", port=8008)
     flash("after credentials")
     
     service_calendar = build('calendar', 'v3', credentials = credentials)
@@ -408,6 +486,173 @@ def delete(id):
 def make():
     main()
     return redirect(url_for('index'))
+
+##@app.route('/')
+##def index():
+##  return print_index_table()
+
+
+@app.route('/test')
+def test_api_request():
+  if 'credentials' not in session:
+    return redirect('authorize')
+
+  # Load credentials from the session.
+  credentials = google.oauth2.credentials.Credentials(
+      **session['credentials'])
+
+  youtube = googleapiclient.discovery.build(
+      API_SERVICE_NAME, API_VERSION, credentials=credentials)
+
+  channel = youtube.channels().list(mine=True, part='snippet').execute()
+
+  # Save credentials back to session in case access token was refreshed.
+  # ACTION ITEM: In a production app, you likely want to save these
+  #              credentials in a persistent database instead.
+  session['credentials'] = credentials_to_dict(credentials)
+
+  return jsonify(**channel)
+
+
+@app.route('/authorize')
+def authorize():
+    # The CLIENT_SECRETS_FILE variable specifies the name of a file that contains
+    # the OAuth 2.0 information for this application, including its client_id and
+    # client_secret.
+
+
+    # Do auth
+    flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRETS_FILE, SCOPES)
+
+    # The URI created here must exactly match one of the authorized redirect URIs
+    # for the OAuth 2.0 client, which you configured in the API Console. If this
+    # value doesn't match an authorized URI, you will get a 'redirect_uri_mismatch'
+    # error.
+    flow.redirect_uri = url_for('oauth2callback', _external=True)
+
+##    # Open in Google Chrome
+##    auth_url, _ = flow.authorization_url(prompt='consent')
+##
+##    auth_url += "&redirect_uri=urn%3Aietf%3Awg%3Aoauth%3A2.0%3Aoob"
+##    webbrowser.register('chrome',
+##	None,
+##	webbrowser.BackgroundBrowser("C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"))
+##    
+##    # webbrowser.get(None).open(auth_url)
+
+    authorization_url, state = flow.authorization_url(
+      # Enable offline access so that you can refresh an access token without
+      # re-prompting the user for permission. Recommended for web server apps.
+      access_type='offline',
+      # Enable incremental authorization. Recommended as a best practice.
+      include_granted_scopes='true')
+
+    # Store the state so the callback can verify the auth server response.
+    session['state'] = state
+
+    return redirect(authorization_url)
+
+##    flash("before credentials")
+##    credentials = run_remote_server(flow, host="34.136.33.201", port=8008)
+##    flash("after credentials")
+##    
+##    service_calendar = build('calendar', 'v3', credentials = credentials)
+##    service_sheets = build('sheets', 'v4', credentials = credentials)
+##    return service_calendar, service_sheets
+ ############################## 
+
+
+
+@app.route('/oauth2callback')
+def oauth2callback():
+    # Specify the state when creating the flow in the callback so that it can
+    # verified in the authorization server response.
+    state = session['state']
+
+    flow = InstalledAppFlow.from_client_secrets_file(
+      CLIENT_SECRETS_FILE, scopes=SCOPES, state=state)
+    flow.redirect_uri = url_for('oauth2callback', _external=True)
+
+    # Use the authorization server's response to fetch the OAuth 2.0 tokens.
+    authorization_response = request.url
+    # Note: using https here because oauthlib is very picky that
+    # OAuth 2.0 should only occur over https.
+    authorization_response = authorization_response.replace("http", "https")
+    flow.fetch_token(authorization_response=authorization_response)
+
+    # Store credentials in the session.
+    # ACTION ITEM: In a production app, you likely want to save these
+    #              credentials in a persistent database instead.
+    credentials = flow.credentials
+
+    service_calendar = build('calendar', 'v3', credentials = credentials)
+    service_sheets = build('sheets', 'v4', credentials = credentials)
+    try: options = get_options()
+    except: flash("get_options() FAILED")
+    list_timetable = list_events_by_guest(service_calendar, options)
+    load_into_spreadsheet(service_sheets, list_timetable)
+
+    session['credentials'] = credentials_to_dict(credentials)
+    return redirect(url_for('index'))
+    #return redirect(url_for('test_api_request'))
+
+
+@app.route('/revoke')
+def revoke():
+  if 'credentials' not in session:
+    return ('You need to <a href="/authorize">authorize</a> before ' +
+            'testing the code to revoke credentials.')
+
+  credentials = google.oauth2.credentials.Credentials(
+    **session['credentials'])
+
+  revoke = requests.post('https://oauth2.googleapis.com/revoke',
+      params={'token': credentials.token},
+      headers = {'content-type': 'application/x-www-form-urlencoded'})
+
+  status_code = getattr(revoke, 'status_code')
+  if status_code == 200:
+    return('Credentials successfully revoked.' + print_index_table())
+  else:
+    return('An error occurred.' + print_index_table())
+
+
+@app.route('/clear')
+def clear_credentials():
+  if 'credentials' in session:
+    del session['credentials']
+  return ('Credentials have been cleared.<br><br>' +
+          print_index_table())
+
+
+def credentials_to_dict(credentials):
+  return {'token': credentials.token,
+          'refresh_token': credentials.refresh_token,
+          'token_uri': credentials.token_uri,
+          'client_id': credentials.client_id,
+          'client_secret': credentials.client_secret,
+          'scopes': credentials.scopes}
+
+##def print_index_table():
+##  return ('<table>' +
+##          '<tr><td><a href="/test">Test an API request</a></td>' +
+##          '<td>Submit an API request and see a formatted JSON response. ' +
+##          '    Go through the authorization flow if there are no stored ' +
+##          '    credentials for the user.</td></tr>' +
+##          '<tr><td><a href="/authorize">Test the auth flow directly</a></td>' +
+##          '<td>Go directly to the authorization flow. If there are stored ' +
+##          '    credentials, you still might not be prompted to reauthorize ' +
+##          '    the application.</td></tr>' +
+##          '<tr><td><a href="/revoke">Revoke current credentials</a></td>' +
+##          '<td>Revoke the access token associated with the current user ' +
+##          '    session. After revoking credentials, if you go to the test ' +
+##          '    page, you should see an <code>invalid_grant</code> error.' +
+##          '</td></tr>' +
+##          '<tr><td><a href="/clear">Clear Flask session credentials</a></td>' +
+##          '<td>Clear the access token currently stored in the user session. ' +
+##          '    After clearing the token, if you <a href="/test">test the ' +
+##          '    API request</a> again, you should go back to the auth flow.' +
+##          '</td></tr></table>')
 
 
 if __name__ == '__main__':
