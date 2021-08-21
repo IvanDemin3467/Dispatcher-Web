@@ -146,7 +146,7 @@ def get_authenticated_services():
     webbrowser.register('chrome',
 	None,
 	webbrowser.BackgroundBrowser("C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"))
-    # webbrowser.get('chrome').open(auth_url)
+    
     # webbrowser.get(None).open(auth_url)
 
     flash("before credentials")
