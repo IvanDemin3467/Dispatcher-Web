@@ -105,7 +105,7 @@ def load_into_spreadsheet(service, list_timetable):
     # Outputs link to created spreadsheet on the screen
     urls = []
     for timetable in list_timetable:
-        flash("******************** Working on: timetable for:" + timetable.name + " ********************")
+        flash("******************** Working on: timetable for: " + timetable.name + " ********************")
         sheet = service.spreadsheets()
         spreadsheet = {
             'properties': {
@@ -244,6 +244,8 @@ def list_events_by_guest(service, options):
 
     try: tutors = get_tutors()
     except: flash("get_tutors() FAILED")
+
+    tutors = tutors_input.split("\r\n")
 
     # init timetables
     list_timetable = []
@@ -407,7 +409,8 @@ def main():
 app = Flask(__name__)
 talisman = Talisman(app)
 app.config['SECRET_KEY'] = 'dfg90845j6lk4djfglsdfglkrm345m567lksdf657lkopmndrumjfrt26kbtyi'
-
+urls_output = []
+urls = []
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -423,7 +426,21 @@ def index():
     conn = get_db_connection()
     posts = conn.execute('SELECT * FROM posts').fetchall()
     conn.close()
-    return render_template('index.html', posts=posts)
+
+    #get tutors list from file
+    try: tutors = get_tutors()
+    except: pass
+    
+    # put tutors into text area
+    init_tutors = ""
+    for tutor in tutors:
+        init_tutors += tutor + "\n"
+    init_tutors = init_tutors[:-1]
+    return render_template('index.html',
+                           posts=posts,
+                           init_tutors=init_tutors,
+                           urls_output=urls,
+                           urls=urls)
 
 
 @app.route('/<int:post_id>')
@@ -576,10 +593,11 @@ def oauth2callback():
     service_sheets = build('sheets', 'v4', credentials = credentials)
     try: options = get_options()
     except: flash("get_options() FAILED")
+
+    #main job is here
     list_timetable = list_events_by_guest(service_calendar, options)
+    global urls
     urls = load_into_spreadsheet(service_sheets, list_timetable)
-    redirect(urls[0])
-    session['credentials'] = credentials_to_dict(credentials)
     return redirect(url_for('index'))
 
 
@@ -645,8 +663,9 @@ if __name__ == '__main__':
     # This is used when running locally only. When deploying to Google App
     # Engine, a webserver process such as Gunicorn will serve the app. This
     # can be configured by adding an `entrypoint` to app.yaml.
-    #app.run(host="0.0.0.0", port=5000, ssl_context="adhoc")
-    app.run(host="127.0.0.1", port=5000, ssl_context=("certificate.pem", "key.pem"))
+    app.run(host="0.0.0.0", port=5000, ssl_context=("certificate.pem", "key.pem"))
+    # app.run(host="0.0.0.0", port=5000, ssl_context="adhoc")
+    # app.run(host="127.0.0.1", port=5000, ssl_context=("certificate.pem", "key.pem"))
 # [END gae_python3_app]
 # [END gae_python38_app]
 
