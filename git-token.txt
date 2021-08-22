@@ -17,8 +17,27 @@ export PATH="/Dispatcher-Web/Dispatcher-Web/:$PATH"
 ctrl+X
 sudo reboot 
 
+cd Dispatcher-Web/Dispatcher-Web/
+git pull
+IvanDemin3467
+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
 export FLASK_APP=Dispatcher-Web
 flask run --host=0.0.0.0
 python3 Dispatcher-Web.py
 
 http://34.136.33.201:5000/
+http://34.136.33.201.nip.io:5000/
+http://34.136.33.201.bc.googleusercontent.com:5000/
+http://dispatcher-omsu.googleusercontent.com:5000/
+dispatcher-omsu
+dispatcher-omsu.googleusercontenturl.com.
+
+dig ns-cloud-a1.googledomains.com +short
+dig ns-cloud-a2.googledomains.com +short
+dig ns-cloud-a3.googledomains.com +short
+dig ns-cloud-a4.googledomains.com +short
+216.239.32.106
+216.239.34.106
+216.239.36.106
+216.239.38.106
+dig -t NS dispatcher-omsu.googleusercontent.com.
