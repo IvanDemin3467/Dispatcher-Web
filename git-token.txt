@@ -31,10 +31,8 @@ flask run --host=0.0.0.0
 python3 Dispatcher-Web.py
 
 http://34.136.33.201:5000/
-http://34.136.33.201.nip.io:5000/
-http://34.136.33.201.bc.googleusercontent.com:5000/
 http://dispatcher-omsu.googleusercontent.com:5000/
 dispatcher-omsu
-http://dispatcher-omsu.googleusercontenturl.com:5000/
-http://dispatcher-omsu.googleusercontenturl.com/oauth2callback:5000/
+https://dispatcher-omsu.googleusercontenturl.com:5000/
+https://dispatcher-omsu.googleusercontenturl.com/oauth2callback:5000/
 https://127.0.0.1:5000/

@@ -103,8 +103,9 @@ def load_into_spreadsheet(service, list_timetable):
     # Call the Sheets API, creates new spreadsheet
     # and loads data from timetable into spreadsheet
     # Outputs link to created spreadsheet on the screen
+    urls = []
     for timetable in list_timetable:
-        flash("********************\nWorking on: timetable for:", timetable.name)
+        flash("******************** Working on: timetable for:" + timetable.name + " ********************")
         sheet = service.spreadsheets()
         spreadsheet = {
             'properties': {
@@ -130,11 +131,8 @@ def load_into_spreadsheet(service, list_timetable):
         url = "https://docs.google.com/spreadsheets/d/" + spreadsheetId
         flash(url)
         
-        # Open in Google Chrome
-        # webbrowser.get('chrome').open(url)
-        # webbrowser.get(None).open(url)
-        redirect(url)
-
+        urls.append(url)
+    return urls
 
 _DEFAULT_AUTH_PROMPT_MESSAGE = (
     "Please visit this URL to authorize this application: {url}"
@@ -257,7 +255,7 @@ def list_events_by_guest(service, options):
     calendar_dict = get_calendar_dict(service)
 
     # get events
-    flash("********************\nWorking on: get all events from all calendars")
+    flash("******************** Working on: get all events from all calendars ********************")
     count_events = 0
     for calendar in calendar_dict:
         while True:
@@ -366,7 +364,7 @@ def main():
         except: flash("get_options() FAILED")
         try:
             list_timetable = list_events_by_guest(service_calendar, options)
-            load_into_spreadsheet(service_sheets, list_timetable)
+            urls = load_into_spreadsheet(service_sheets, list_timetable)
         except HttpError as e:
             flash(e)
             flash("/n RETRY")
@@ -399,6 +397,7 @@ def main():
 ##            flash(e)
     service_calendar.close()
     service_sheets.close()
+    return urls
     
 
 
@@ -517,12 +516,14 @@ def test_api_request():
   return jsonify(**channel)
 
 
-@app.route('/authorize')
+@app.route('/authorize', methods=['POST'])
 def authorize():
     # The CLIENT_SECRETS_FILE variable specifies the name of a file that contains
     # the OAuth 2.0 information for this application, including its client_id and
     # client_secret.
 
+    global tutors_input
+    tutors_input = request.form['tutors_input']
 
     # Do auth
     flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRETS_FILE, SCOPES)
@@ -532,16 +533,6 @@ def authorize():
     # value doesn't match an authorized URI, you will get a 'redirect_uri_mismatch'
     # error.
     flow.redirect_uri = url_for('oauth2callback', _external=True)
-
-##    # Open in Google Chrome
-##    auth_url, _ = flow.authorization_url(prompt='consent')
-##
-##    auth_url += "&redirect_uri=urn%3Aietf%3Awg%3Aoauth%3A2.0%3Aoob"
-##    webbrowser.register('chrome',
-##	None,
-##	webbrowser.BackgroundBrowser("C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"))
-##    
-##    # webbrowser.get(None).open(auth_url)
 
     authorization_url, state = flow.authorization_url(
       # Enable offline access so that you can refresh an access token without
@@ -554,15 +545,6 @@ def authorize():
     session['state'] = state
 
     return redirect(authorization_url)
-
-##    flash("before credentials")
-##    credentials = run_remote_server(flow, host="34.136.33.201", port=8008)
-##    flash("after credentials")
-##    
-##    service_calendar = build('calendar', 'v3', credentials = credentials)
-##    service_sheets = build('sheets', 'v4', credentials = credentials)
-##    return service_calendar, service_sheets
- ############################## 
 
 
 
@@ -595,11 +577,10 @@ def oauth2callback():
     try: options = get_options()
     except: flash("get_options() FAILED")
     list_timetable = list_events_by_guest(service_calendar, options)
-    load_into_spreadsheet(service_sheets, list_timetable)
-
+    urls = load_into_spreadsheet(service_sheets, list_timetable)
+    redirect(urls[0])
     session['credentials'] = credentials_to_dict(credentials)
     return redirect(url_for('index'))
-    #return redirect(url_for('test_api_request'))
 
 
 @app.route('/revoke')
@@ -664,7 +645,8 @@ if __name__ == '__main__':
     # This is used when running locally only. When deploying to Google App
     # Engine, a webserver process such as Gunicorn will serve the app. This
     # can be configured by adding an `entrypoint` to app.yaml.
-    app.run(host="0.0.0.0", port=5000, ssl_context="adhoc")
+    #app.run(host="0.0.0.0", port=5000, ssl_context="adhoc")
+    app.run(host="127.0.0.1", port=5000, ssl_context=("certificate.pem", "key.pem"))
 # [END gae_python3_app]
 # [END gae_python38_app]
 
