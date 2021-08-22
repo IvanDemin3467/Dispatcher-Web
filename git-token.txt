@@ -5,6 +5,11 @@ pip install flask
 pip install google
 pip install google-api-python-client
 pip install google_auth_oauthlib
+pip install pyOpenSSL
+pip install flask-talisman
+
+
+pip install pyopenssl
 
 
 1. Open the .bashrc file in your home directory (for example, /home/your-user-name/.bashrc) in a text editor.
@@ -30,14 +35,6 @@ http://34.136.33.201.nip.io:5000/
 http://34.136.33.201.bc.googleusercontent.com:5000/
 http://dispatcher-omsu.googleusercontent.com:5000/
 dispatcher-omsu
-dispatcher-omsu.googleusercontenturl.com.
-
-dig ns-cloud-a1.googledomains.com +short
-dig ns-cloud-a2.googledomains.com +short
-dig ns-cloud-a3.googledomains.com +short
-dig ns-cloud-a4.googledomains.com +short
-216.239.32.106
-216.239.34.106
-216.239.36.106
-216.239.38.106
-dig -t NS dispatcher-omsu.googleusercontent.com.
+http://dispatcher-omsu.googleusercontenturl.com:5000/
+http://dispatcher-omsu.googleusercontenturl.com/oauth2callback:5000/
+https://127.0.0.1:5000/

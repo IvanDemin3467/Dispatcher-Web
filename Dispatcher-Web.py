@@ -17,6 +17,7 @@
 from flask import Flask, render_template, request, url_for, flash, redirect, session
 import sqlite3
 from werkzeug.exceptions import abort
+from flask_talisman import Talisman
 
 def get_db_connection():
     conn = sqlite3.connect('database.db')
@@ -404,6 +405,7 @@ def main():
 # If `entrypoint` is not defined in app.yaml, App Engine will look for an app
 # called `app` in `main.py`.
 app = Flask(__name__)
+talisman = Talisman(app)
 app.config['SECRET_KEY'] = 'dfg90845j6lk4djfglsdfglkrm345m567lksdf657lkopmndrumjfrt26kbtyi'
 
 
@@ -567,12 +569,12 @@ def authorize():
 def oauth2callback():
     # Specify the state when creating the flow in the callback so that it can
     # verified in the authorization server response.
+    environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
     state = session['state']
 
     flow = InstalledAppFlow.from_client_secrets_file(
       CLIENT_SECRETS_FILE, scopes=SCOPES, state=state)
     redirect_uri = url_for('oauth2callback', _external=True)
-    redirect_uri = redirect_uri.replace("http", "https")
     flow.redirect_uri = redirect_uri
 
     # Use the authorization server's response to fetch the OAuth 2.0 tokens.
@@ -661,7 +663,7 @@ if __name__ == '__main__':
     # This is used when running locally only. When deploying to Google App
     # Engine, a webserver process such as Gunicorn will serve the app. This
     # can be configured by adding an `entrypoint` to app.yaml.
-    app.run(host='127.0.0.1', port=8080, debug=True)
+    app.run(host="0.0.0.0", port=5000, ssl_context="adhoc")
 # [END gae_python3_app]
 # [END gae_python38_app]
 
