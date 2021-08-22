@@ -1,6 +1,9 @@
 # Dispatcher-Web
 Application for the dispatcher to work with the Google Calendar via Web API.
+
 Now it works as web app.
+
+It is accessible at https://dispatcher-omsu.googleusercontenturl.com:5000/
 
 **Input files: options.txt**
 
