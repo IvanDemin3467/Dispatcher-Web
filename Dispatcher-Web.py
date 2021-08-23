@@ -1,38 +1,7 @@
-# Copyright 2018 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
-# [START gae_python38_app]
-# [START gae_python3_app]
 from flask import Flask, render_template, request, url_for, flash, redirect, session
-import sqlite3
 from werkzeug.exceptions import abort
 from flask_talisman import Talisman
-
-def get_db_connection():
-    conn = sqlite3.connect('database.db')
-    conn.row_factory = sqlite3.Row
-    return conn
-
-def get_post(post_id):
-    conn = get_db_connection()
-    post = conn.execute('SELECT * FROM posts WHERE id = ?',
-                        (post_id,)).fetchone()
-    conn.close()
-    if post is None:
-        abort(404)
-    return post
-
 
 from os import environ
 
@@ -45,12 +14,11 @@ from google_auth_oauthlib.flow import *
 
 from datetime import datetime
 
-import webbrowser
 
 CLIENT_SECRETS_FILE = "client_secret.json"
 
 # This access scope grants read-only access to the authenticated user's Calendar
-# account.
+# and Spreadsheets accounts.
 SCOPES = ['https://www.googleapis.com/auth/calendar',
           'https://www.googleapis.com/auth/spreadsheets']
 API_SERVICE_NAME = 'calendar'
@@ -71,7 +39,8 @@ class Timetable:
         self.name = name
 
     def put(self, value, period, day, week):
-        self.timetable[week-1][day-1][period-1] = value
+        stored_value = self.get(period, day, week)
+        self.timetable[week-1][day-1][period-1] = value if stored_value == "" else "ОШИБКА! Две пары в одно время"
 
     def get(self, period, day, week):
         return self.timetable[week-1][day-1][period-1]
@@ -102,10 +71,15 @@ def load_into_spreadsheet(service, list_timetable):
     # Input is: spreadsheet service, options dict and timetable object
     # Call the Sheets API, creates new spreadsheet
     # and loads data from timetable into spreadsheet
-    # Outputs link to created spreadsheet on the screen
+    # Outputs link to created spreadsheet
+
+    # list of urls to ouput
     urls = []
+
     for timetable in list_timetable:
         flash("******************** Working on: timetable for: " + timetable.name + " ********************")
+
+        # Create spreadsheet
         sheet = service.spreadsheets()
         spreadsheet = {
             'properties': {
@@ -116,18 +90,26 @@ def load_into_spreadsheet(service, list_timetable):
         spreadsheet = service.spreadsheets().create(body=spreadsheet,
                                             fields='spreadsheetId').execute()
         spreadsheetId = spreadsheet.get('spreadsheetId')
+
+        # Get into first list
         range_name = "Лист1!A1"
+
+        # Load values from timetable in appropriate format for spreadsheet
         values = timetable.get_list()
         body = {
             'values': values
         }
         value_input_option = "USER_ENTERED"
-        
+
+        # Push values into spreadsheet via API
         result = service.spreadsheets().values().update(
             spreadsheetId=spreadsheetId, range=range_name,
             valueInputOption=value_input_option, body=body).execute()
-        
+
+        # How many calls updated?
         flash('{0} cells updated.'.format(result.get('updatedCells')))
+
+        # The link to the result
         url = "https://docs.google.com/spreadsheets/d/" + spreadsheetId
         flash(url)
         
@@ -186,11 +168,7 @@ def run_remote_server(
     flow.redirect_uri = "http://{}:{}/".format(host, local_server.server_port)
     auth_url, _ = flow.authorization_url(**kwargs)
 
-##    if open_browser:
-##        webbrowser.open(auth_url, new=1, autoraise=True)
     redirect(auth_url)
-
-##    print(authorization_prompt_message.format(url=auth_url))
 
     local_server.handle_request()
 
@@ -291,7 +269,7 @@ def list_events_by_guest(service, options):
             page_token = events.get('nextPageToken')
             if not page_token:
                 break
-    flash(f"Got {count_events} events for {len(list_timetable)} groups")
+    flash(f"Got {count_events} events for {len(list_timetable)} tutors")
 
     return list_timetable
 
@@ -348,63 +326,6 @@ def get_calendar_dict(service):
     return calendar_dict
 
 
-def main():
-    # When running locally, disable OAuthlib's HTTPs verification. When
-    # running in production *do not* leave this option enabled.
-    environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
-    try: service_calendar, service_sheets = get_authenticated_services()
-    except BaseException as e:
-        flash(e)
-        flash("get_authenticated_services() FAILED")
-
-    first_run = True
-    while True:
-        if first_run:
-            Input = "byguest"
-            first_run = False
-        else:
-            break
-            # Input = input("Next task: ")
-        try: options = get_options()
-        except: flash("get_options() FAILED")
-        try:
-            list_timetable = list_events_by_guest(service_calendar, options)
-            urls = load_into_spreadsheet(service_sheets, list_timetable)
-        except HttpError as e:
-            flash(e)
-            flash("/n RETRY")
-            first_run = True
-        except BaseException as e:
-            flash("some non HttpError in main module")
-            flash(e)
-##        try:
-##            if Input == "list" or Input == "List" or Input == "LIST":
-##                list_calendar_events(service_calendar)
-##            if Input == "byparam":
-##                list_timetable = list_events_by_param(service_calendar, options)
-##                load_into_spreadsheet(service_sheets, list_timetable)
-##            if Input == "byguest":
-##                list_timetable = list_events_by_guest(service_calendar, options)
-##                load_into_spreadsheet(service_sheets, list_timetable)
-##            if Input == "cal_list":
-##                get_calendar_list()
-##            if Input == "q" or Input == "quit" or Input == "Quit" or Input == "QUIT":
-##                break
-##            if Input == "del -all" or Input == "quit" or Input == "Quit" or Input == "QUIT":
-##                if(input("Are you sure? ") == "Yes"):
-##                    del_all_calendar_events(service_calendar, options)
-##        except HttpError as e:
-##            flash(e)
-##            flash("/n RETRY")
-##            first_run = True
-##        except BaseException as e:
-##            flash("some non HttpError in main module")
-##            flash(e)
-    service_calendar.close()
-    service_sheets.close()
-    return urls
-    
-
 
 
 # If `entrypoint` is not defined in app.yaml, App Engine will look for an app
@@ -426,9 +347,6 @@ def index():
     elif request.method == 'GET':
         pass
 
-    conn = get_db_connection()
-    posts = conn.execute('SELECT * FROM posts').fetchall()
-    conn.close()
 
     #get tutors list from file
     try: tutors = get_tutors()
@@ -440,78 +358,11 @@ def index():
         init_tutors += tutor + "\n"
     init_tutors = init_tutors[:-1]
     return render_template('index.html',
-                           posts=posts,
                            init_tutors=init_tutors,
                            urls_output=urls,
                            urls=urls)
 
 
-@app.route('/<int:post_id>')
-def post(post_id):
-    post = get_post(post_id)
-    return render_template('post.html', post=post)
-
-
-@app.route('/create', methods=('GET', 'POST'))
-def create():
-    if request.method == 'POST':
-        title = request.form['title']
-        content = request.form['content']
-
-        if not title:
-            flash('Title is required!')
-        else:
-            conn = get_db_connection()
-            conn.execute('INSERT INTO posts (title, content) VALUES (?, ?)',
-                         (title, content))
-            conn.commit()
-            conn.close()
-            return redirect(url_for('index'))
-
-    return render_template('create.html')
-
-
-@app.route('/<int:id>/edit', methods=('GET', 'POST'))
-def edit(id):
-    post = get_post(id)
-
-    if request.method == 'POST':
-        title = request.form['title']
-        content = request.form['content']
-
-        if not title:
-            flash('Title is required!')
-        else:
-            conn = get_db_connection()
-            conn.execute('UPDATE posts SET title = ?, content = ?'
-                         ' WHERE id = ?',
-                         (title, content, id))
-            conn.commit()
-            conn.close()
-            return redirect(url_for('index'))
-
-    return render_template('edit.html', post=post)
-
-
-@app.route('/<int:id>/delete', methods=('POST',))
-def delete(id):
-    post = get_post(id)
-    conn = get_db_connection()
-    conn.execute('DELETE FROM posts WHERE id = ?', (id,))
-    conn.commit()
-    conn.close()
-    flash('"{}" was successfully deleted!'.format(post['title']))
-    return redirect(url_for('index'))
-
-
-@app.route('/make', methods=('POST', 'GET'))
-def make():
-    main()
-    return redirect(url_for('index'))
-
-##@app.route('/')
-##def index():
-##  return print_index_table()
 
 
 @app.route('/test')
@@ -667,9 +518,9 @@ if __name__ == '__main__':
     # Engine, a webserver process such as Gunicorn will serve the app. This
     # can be configured by adding an `entrypoint` to app.yaml.
     app.run(host="0.0.0.0", port=5000, ssl_context=("certificate.pem", "key.pem"))
-    #app.run(host="0.0.0.0", port=5000, ssl_context="adhoc")
     #app.run(host="127.0.0.1", port=5000, ssl_context=("certificate.pem", "key.pem"))
 # [END gae_python3_app]
 # [END gae_python38_app]
+    #app.run(host="0.0.0.0", port=5000, ssl_context="adhoc")
 
 
