@@ -276,6 +276,7 @@ def list_events_by_guest(service, options):
                                     count_events += 1
                                     event_tutor = calendar_dict[calendar]
                                     week = int(event_start.strftime("%W").lstrip("0"))
+                                    week = week - options["first_week"]
                                     day = int(event_start.strftime("%w"))
                                     period = event_start.strftime("%H")
                                     try: period = periods_dict[period]
@@ -320,9 +321,11 @@ def get_options():
     options["lower_date"] = datetime.strptime(lower_date, "%Y-%m-%d %H:%M:%S")
     upper_date = stream[1].rstrip()
     options["upper_date"] = datetime.strptime(upper_date, "%Y-%m-%d %H:%M:%S")
+    first_week = stream[2].rstrip()
+    options["first_week"] = int(first_week)
 
     groups = []
-    for i in range(2, len(stream)):
+    for i in range(3, len(stream)):
         nextline = stream[i].rstrip()
         groups.append(nextline)
     
@@ -664,8 +667,8 @@ if __name__ == '__main__':
     # Engine, a webserver process such as Gunicorn will serve the app. This
     # can be configured by adding an `entrypoint` to app.yaml.
     app.run(host="0.0.0.0", port=5000, ssl_context=("certificate.pem", "key.pem"))
-    # app.run(host="0.0.0.0", port=5000, ssl_context="adhoc")
-    # app.run(host="127.0.0.1", port=5000, ssl_context=("certificate.pem", "key.pem"))
+    #app.run(host="0.0.0.0", port=5000, ssl_context="adhoc")
+    #app.run(host="127.0.0.1", port=5000, ssl_context=("certificate.pem", "key.pem"))
 # [END gae_python3_app]
 # [END gae_python38_app]
 

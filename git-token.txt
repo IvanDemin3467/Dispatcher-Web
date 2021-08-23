@@ -34,7 +34,7 @@ sudo nohup python Dispatcher-Web.py > log.txt 2>&1 &
 forever start -c python3 Dispatcher-Web.py
 forever stop Dispatcher-Web.py
 nohup python3 Dispatcher-Web.py &
-pkill -f password-evolution.py
+pkill -f Dispatcher-Web.py
 
 
 http://34.136.33.201:5000/
