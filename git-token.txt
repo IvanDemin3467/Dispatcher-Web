@@ -7,6 +7,7 @@ pip install google-api-python-client
 pip install google_auth_oauthlib
 pip install pyOpenSSL
 pip install flask-talisman
+pip install forever
 
 
 pip install pyopenssl
@@ -23,12 +24,18 @@ ctrl+X
 sudo reboot 
 
 cd Dispatcher-Web/Dispatcher-Web/
+python3 Dispatcher-Web.py
 git pull
 IvanDemin3467
 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
 export FLASK_APP=Dispatcher-Web
 flask run --host=0.0.0.0
-python3 Dispatcher-Web.py
+sudo nohup python Dispatcher-Web.py > log.txt 2>&1 &
+forever start -c python3 Dispatcher-Web.py
+forever stop Dispatcher-Web.py
+nohup python3 Dispatcher-Web.py &
+pkill -f password-evolution.py
+
 
 http://34.136.33.201:5000/
 http://dispatcher-omsu.googleusercontent.com:5000/
