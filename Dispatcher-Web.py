@@ -364,6 +364,23 @@ def index():
                            urls=urls)
 
 
+@app.route('/options', methods=('GET', 'POST'))
+def options():
+    if request.method == 'POST':
+        title = request.form['title']
+        content = request.form['content']
+
+        if not title:
+            flash('Title is required!')
+        else:
+            conn = get_db_connection()
+            conn.execute('INSERT INTO posts (title, content) VALUES (?, ?)',
+                         (title, content))
+            conn.commit()
+            conn.close()
+            return redirect(url_for('index'))
+
+    return render_template('index.html')
 
 
 @app.route('/test')
@@ -519,8 +536,8 @@ if __name__ == '__main__':
     # Engine, a webserver process such as Gunicorn will serve the app. This
     # can be configured by adding an `entrypoint` to app.yaml.
 
-    app.run(host="0.0.0.0", port=5000, ssl_context=("certificate.pem", "key.pem"))
-    #app.run(host="127.0.0.1", port=5000, ssl_context=("certificate.pem", "key.pem"))
+    #app.run(host="0.0.0.0", port=5000, ssl_context=("certificate.pem", "key.pem"))
+    app.run(host="127.0.0.1", port=5000, ssl_context=("certificate.pem", "key.pem"))
 # [END gae_python3_app]
 # [END gae_python38_app]
     #app.run(host="0.0.0.0", port=5000, ssl_context="adhoc")

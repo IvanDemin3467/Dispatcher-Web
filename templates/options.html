@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block content %}
+ <form action="{{ url_for('options') }}" method="POST">
+  <p><b>Дата начала семестра. Например, 2021-09-01 08:00:00</b><br>
+   <input type="text" size="40" name="lower_date">{{ lower_date }}
+  </p>
+  <p><b>Дата окончания семестра:</b><br>
+   <input type="text" size="40">
+  </p>
+  <p><b>Семестр:</b><Br>
+   <input type="radio" name="browser" value="ie"> Internet Explorer<Br>
+   <input type="radio" name="browser" value="opera"> Opera<Br>
+   <input type="radio" name="browser" value="firefox"> Firefox<Br>
+  </p>
+  <p>Комментарий<Br>
+   <textarea name="comment" cols="40" rows="3"></textarea></p>
+  <p><input type="submit" value="Сохранить" class="btn btn-primary"></p>
+ </form>
+
+
+<form action="{{ url_for('options') }}" method="POST">
+    <input type="submit" value="Сохранить" class="btn btn-primary">
+</form>
+
+{% endblock %}
