@@ -113,7 +113,7 @@ def load_into_spreadsheet(service, list_timetable):
         url = "https://docs.google.com/spreadsheets/d/" + spreadsheetId
         flash(url)
         
-        urls.append(url)
+        urls.append({timetable.name.split("@")[0]: url})
     return urls
 
 _DEFAULT_AUTH_PROMPT_MESSAGE = (
@@ -357,6 +357,7 @@ def index():
     for tutor in tutors:
         init_tutors += tutor + "\n"
     init_tutors = init_tutors[:-1]
+    
     return render_template('index.html',
                            init_tutors=init_tutors,
                            urls_output=urls,
@@ -517,8 +518,9 @@ if __name__ == '__main__':
     # This is used when running locally only. When deploying to Google App
     # Engine, a webserver process such as Gunicorn will serve the app. This
     # can be configured by adding an `entrypoint` to app.yaml.
-    app.run(host="0.0.0.0", port=5000, ssl_context=("certificate.pem", "key.pem"))
-    #app.run(host="127.0.0.1", port=5000, ssl_context=("certificate.pem", "key.pem"))
+
+    #app.run(host="0.0.0.0", port=5000, ssl_context=("certificate.pem", "key.pem"))
+    app.run(host="127.0.0.1", port=5000, ssl_context=("certificate.pem", "key.pem"))
 # [END gae_python3_app]
 # [END gae_python38_app]
     #app.run(host="0.0.0.0", port=5000, ssl_context="adhoc")

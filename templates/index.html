@@ -1,21 +1,28 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <h1>{% block title %} Welcome to Dispatcher {% endblock %}</h1>
+    <h2>{% block title %} Добро пожаловать! {% endblock %}</h2>
+    <h3>Меня зовут Диспетчер.</h3>
 
     <form action="{{ url_for('authorize') }}" method="post">
-        <p>Список идентификаторов преподавателей. Например, example@college.omsu.ru</p>
+        <h4>Введите список преподавателей.</h4>
+        <p>Например, example@college.omsu.ru</p>
         <textarea name="tutors_input" cols="100" rows="5">{{ init_tutors }}</textarea>
         <br>
         <input type="submit" value="Отобразить расписание" class="btn btn-primary">
         <br>
-        <p>Расписание появится тут:</p>
     </form>
 
-        {% for url in urls %}
-            <a href={{ url }}>{{ url }}</a>
-            <br>
-        {% endfor %}
+<br>
+{% if urls|length > 0 %}
+   <h4>Расписание для преподавателей:</h4><br>
+   {% for dict_item in urls %}
+      {% for key, value in dict_item.items() %}
+               <a href={{ value }}>{{ key }}</a>
+               <br>
+      {% endfor %}
+   {% endfor %}
+{% endif %}
 
 {% endblock %}
 
