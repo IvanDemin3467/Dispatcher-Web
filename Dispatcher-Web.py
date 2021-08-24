@@ -519,8 +519,8 @@ if __name__ == '__main__':
     # Engine, a webserver process such as Gunicorn will serve the app. This
     # can be configured by adding an `entrypoint` to app.yaml.
 
-    #app.run(host="0.0.0.0", port=5000, ssl_context=("certificate.pem", "key.pem"))
-    app.run(host="127.0.0.1", port=5000, ssl_context=("certificate.pem", "key.pem"))
+    app.run(host="0.0.0.0", port=5000, ssl_context=("certificate.pem", "key.pem"))
+    #app.run(host="127.0.0.1", port=5000, ssl_context=("certificate.pem", "key.pem"))
 # [END gae_python3_app]
 # [END gae_python38_app]
     #app.run(host="0.0.0.0", port=5000, ssl_context="adhoc")
