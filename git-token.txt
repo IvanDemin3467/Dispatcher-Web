@@ -5,12 +5,7 @@ pip install flask
 pip install google
 pip install google-api-python-client
 pip install google_auth_oauthlib
-pip install pyOpenSSL
 pip install flask-talisman
-pip install forever
-
-
-pip install pyopenssl
 
 
 1. Open the .bashrc file in your home directory (for example, /home/your-user-name/.bashrc) in a text editor.
