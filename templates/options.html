@@ -1,21 +1,26 @@
 {% extends 'base.html' %}
 
 {% block content %}
- <form action="{{ url_for('options') }}" method="POST">
+ <form action="{{ url_for('edit_options') }}" method="POST">
   <p><b>Дата начала семестра. Например, 2021-09-01 08:00:00</b><br>
-   <input type="text" size="40" name="lower_date">{{ lower_date }}
+   <p><input type="text" size="40" name="lower_date" value="{{ lower_date }}"></p>
   </p>
   <p><b>Дата окончания семестра:</b><br>
-   <input type="text" size="40" name="upper_date">{{ upper_date }}
+   <p><input type="text" size="40" name="upper_date" value="{{ upper_date }}"></p>
   </p>
   <p><b>Семестр:</b><Br>
-   <input type="radio" name="browser" value="1"> Осенний <Br>
-   <input type="radio" name="browser" value="2"> Весенний <Br>
+   <p> Для осеннего семестра первая неделя = 34 <Br></p>
+   <p> Для весеннего семестра первая неделя = 1 <Br></p>
   </p>
-  <p><b>Настраиваемая первя неделя:</b><br>
-   <input type="text" size="40" name="first_week">{{ first_week }}
+  <p><b>Первая неделя:</b><br>
+   <p><input type="text" size="40" name="first_week" value="{{ first_week }}"></p>
   </p>
   <p><input type="submit" value="Сохранить" class="btn btn-primary"></p>
+ </form>
+
+
+ <form action="{{ url_for('set_default_options') }}" method="POST">
+    <p><input type="submit" value="Восстановить по умолчанию" class="btn btn-secondary"></p>
  </form>
 
 

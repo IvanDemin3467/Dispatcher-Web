@@ -6,7 +6,8 @@
 
     <form action="{{ url_for('authorize') }}" method="post">
         <h4>Введите список преподавателей, каждый с новой строки</h4>
-        <p>Например, example@college.omsu.ru</p>
+        Например, example@college.omsu.ru
+        <br>
         <textarea name="tutors_input" cols="100" rows="5">{{ init_tutors }}</textarea>
         <br>
         <input type="submit" value="Отобразить расписание" class="btn btn-primary">

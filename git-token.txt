@@ -33,7 +33,8 @@ forever stop Dispatcher-Web.py
 nohup python3 Dispatcher-Web.py &
 pkill -f Dispatcher-Web.py
 
-gunicorn --certfile=certificate.pem --keyfile=key.pem Dispatcher-Web:app
+gunicorn --certfile=certificate.pem --keyfile=key.pem --bind 0.0.0.0:5000 Dispatcher-Web:app
+nohup gunicorn --certfile=certificate.pem --keyfile=key.pem --bind 0.0.0.0:5000 Dispatcher-Web:app &
 
 e:
 cd E:\Programs\Python\Python39\Dispatcher-Web

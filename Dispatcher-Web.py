@@ -289,12 +289,12 @@ def get_tutors():
         tutors_list.append(nextline)
     return tutors_list
 
-def get_options():
+def get_options(path = "options.txt"):
     # It reads parameters from file: lower_date, upper_date, group
     # Those params are to be passed to function list_events_by_param
     # That function will list events, filtered by params
     options = {}
-    s = open("options.txt", "rt", encoding = "utf-8")
+    s = open(path, "rt", encoding = "utf-8")
     stream = list(s)
     s.close()
     lower_date = stream[0].rstrip()
@@ -311,6 +311,40 @@ def get_options():
     
     options["groups"] = groups
     return options
+
+def set_options(options, path = "options.txt"):
+    # It writes parameters to file: lower_date, upper_date, first_week
+    try:
+        s = open(path, "wt", encoding = "utf-8")
+        
+        s.write(str(options["lower_date"]) + "\n")
+        s.write(str(options["upper_date"]) + "\n")
+        s.write(str(options["first_week"]))
+
+        s.close()
+    except:
+        result = "FAILED writing options"
+        flash(result)
+    else:
+        result = "SUCCESS writing options"
+    return result
+
+def load_default_options():
+    # It writes parameters to file: lower_date, upper_date, first_week
+    try:
+        default_options = get_options("default-options.txt")
+    except:
+        result = "FAILED reading default options"
+        flash(result)
+    else:
+        result = "SUCCESS reading default options"
+
+    try:
+        set_options(default_options)
+    except:
+        result = "FAILED writing default options"
+        flash(result)
+    return result
 
 def get_calendar_dict(service):
     # This function retrieves list of calendars for user
@@ -368,21 +402,31 @@ def index():
 
 @app.route('/options', methods=('GET', 'POST'))
 def options():
-    if request.method == 'POST':
-        title = request.form['title']
-        content = request.form['content']
+    options=get_options()
 
-        if not title:
-            flash('Title is required!')
-        else:
-            conn = get_db_connection()
-            conn.execute('INSERT INTO posts (title, content) VALUES (?, ?)',
-                         (title, content))
-            conn.commit()
-            conn.close()
-            return redirect(url_for('index'))
+    return render_template('options.html',
+                           lower_date=options["lower_date"],
+                           upper_date=options["upper_date"],
+                           first_week=options["first_week"])
 
-    return render_template('index.html')
+
+@app.route('/edit_options', methods=('GET', 'POST'))
+def edit_options():
+    options=get_options()
+
+    options["lower_date"] = request.form['lower_date']
+    options["upper_date"] = request.form['upper_date']
+    options["first_week"] = request.form['first_week']
+    set_options(options)
+
+    return redirect('options')
+
+@app.route('/set_default_options', methods=('GET', 'POST'))
+def set_default_options():
+    load_default_options()
+
+    return redirect('options')
+
 
 
 @app.route('/test')
