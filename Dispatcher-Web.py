@@ -14,6 +14,8 @@ from google_auth_oauthlib.flow import *
 
 from datetime import datetime
 
+from waitress import serve
+
 
 CLIENT_SECRETS_FILE = "client_secret.json"
 
@@ -331,7 +333,7 @@ def get_calendar_dict(service):
 # If `entrypoint` is not defined in app.yaml, App Engine will look for an app
 # called `app` in `main.py`.
 app = Flask(__name__)
-talisman = Talisman(app)
+#talisman = Talisman(app)
 app.config['SECRET_KEY'] = 'dfg90845j6lk4djfglsdfglkrm345m567lksdf657lkopmndrumjfrt26kbtyi'
 urls_output = []
 urls = []
@@ -538,6 +540,7 @@ if __name__ == '__main__':
 
     #app.run(host="0.0.0.0", port=5000, ssl_context=("certificate.pem", "key.pem"))
     app.run(host="127.0.0.1", port=5000, ssl_context=("certificate.pem", "key.pem"))
+    #serve(app, host='127.0.0.1', port=5000)
 # [END gae_python3_app]
 # [END gae_python38_app]
     #app.run(host="0.0.0.0", port=5000, ssl_context="adhoc")
