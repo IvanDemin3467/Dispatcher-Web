@@ -1,4 +1,3 @@
-
 from flask import Flask, render_template, request, url_for, flash, redirect, session
 from werkzeug.exceptions import abort
 
@@ -26,42 +25,44 @@ API_SERVICE_NAME = 'calendar'
 API_VERSION = 'v3'
 
 # periods_dict translates hour of the day into period of the day
-periods_dict = {"08" : 1, "09" : 2, "10" : 2, "11" : 3, "12" : 3, "13" : 4,
-                "14" : 4, "15" : 5, "16" : 5, "17" : 6, "18" : 7, "19" : 7}
+periods_dict = {"08": 1, "09": 2, "10": 2, "11": 3, "12": 3, "13": 4,
+                "14": 4, "15": 5, "16": 5, "17": 6, "18": 7, "19": 7}
 # days_dict translates day of the week into locl name of the day
 days_dict = {0: "Пн", 1: "Вт", 2: "Ср", 3: "Чт", 4: "Пт", 5: "Сб", 6: "Вс"}
+
 
 # timetable stores all scheduled events (pairs)
 class Timetable:
     def __init__(self, name="Other"):
         self.timetable = [[["" for period in range(7)]
-                               for day in range(7)]
-                               for week in range(52)]
+                           for day in range(7)]
+                          for week in range(52)]
         self.name = name
 
     def put(self, value, period, day, week):
         stored_value = self.get(period, day, week)
-        self.timetable[week-1][day-1][period-1] = value if stored_value == "" else "ОШИБКА! Две пары в одно время"
+        self.timetable[week - 1][day - 1][period - 1] = value if stored_value == "" else "ОШИБКА! Две пары в одно время"
 
     def get(self, period, day, week):
-        return self.timetable[week-1][day-1][period-1]
+        return self.timetable[week - 1][day - 1][period - 1]
 
     def get_list(self):
         # .get_list() - prepares list to load into spreadsheet
         complete_list = []
         for week in range(52):
             empty_week = True
-            complete_list.append(["Неделя: " + str(week+1), "", "", "", "", "", "", ""])
+            complete_list.append(["Неделя: " + str(week + 1), "", "", "", "", "", "", ""])
             complete_list.append(["", "Пара 1", "Пара 2", "Пара 3", "Пара 4", "Пара 5", "Пара 6", "Пара 7"])
             for day in range(7):
-                row = []
-                row.append(days_dict[day])
+                row = [days_dict[day]]
                 for period in range(7):
                     value = self.timetable[week][day][period]
-                    if value == "": value = " "
-                    else: empty_week = False
+                    if value == "":
+                        value = " "
+                    else:
+                        empty_week = False
                     row.append(value)
-                    
+
                 complete_list.append(row)
             if empty_week:
                 del complete_list[-9:]
@@ -75,22 +76,21 @@ def load_into_spreadsheet(service, list_timetable):
     # Outputs link to created spreadsheet
 
     # list of urls to ouput
+    global urls
     urls = []
 
     for timetable in list_timetable:
         flash("******************** Working on: timetable for: " + timetable.name + " ********************")
 
         # Create spreadsheet
-        sheet = service.spreadsheets()
         spreadsheet = {
             'properties': {
-                'title': timetable.name +
-                datetime.now().strftime("-%Y-%m-%d-%H-%M-%S")
+                'title': timetable.name + datetime.now().strftime("-%Y-%m-%d-%H-%M-%S")
             }
         }
         spreadsheet = service.spreadsheets().create(body=spreadsheet,
-                                            fields='spreadsheetId').execute()
-        spreadsheetId = spreadsheet.get('spreadsheetId')
+                                                    fields='spreadsheetId').execute()
+        spreadsheet_id = spreadsheet.get('spreadsheetId')
 
         # Get into first list
         range_name = "Лист1!A1"
@@ -104,16 +104,16 @@ def load_into_spreadsheet(service, list_timetable):
 
         # Push values into spreadsheet via API
         result = service.spreadsheets().values().update(
-            spreadsheetId=spreadsheetId, range=range_name,
+            spreadsheetId=spreadsheet_id, range=range_name,
             valueInputOption=value_input_option, body=body).execute()
 
         # How many calls updated?
         flash('{0} cells updated.'.format(result.get('updatedCells')))
 
         # The link to the result
-        url = "https://docs.google.com/spreadsheets/d/" + spreadsheetId
+        url = "https://docs.google.com/spreadsheets/d/" + spreadsheet_id
         flash(url)
-        
+
         urls.append({timetable.name.split("@")[0]: url})
     return urls
 
@@ -124,9 +124,6 @@ def list_events_by_guest(service, options):
     # Also it filters events by name of guest (tutor)
     page_token = None
 
-    try: tutors = get_tutors()
-    except: flash("get_tutors() FAILED")
-
     tutors = tutors_input.split("\r\n")
 
     # init timetables
@@ -134,7 +131,7 @@ def list_events_by_guest(service, options):
     for tutor in tutors:
         timetable = Timetable(tutor)
         list_timetable.append(timetable)
-    
+
     # get calendar list
     calendar_dict = get_calendar_dict(service)
 
@@ -143,30 +140,32 @@ def list_events_by_guest(service, options):
     count_events = 0
     for calendar in calendar_dict:
         while True:
-            events = service.events().list(calendarId=calendar, pageToken=page_token, singleEvents = True).execute()
+            events = service.events().list(calendarId=calendar, pageToken=page_token, singleEvents=True).execute()
             for event in events['items']:
                 try:
                     event_name = event['summary']
                     event_start = datetime.strptime(event['start']['dateTime'],
                                                     "%Y-%m-%dT%H:%M:%S+06:00")
                     for timetable in list_timetable:
-                        if event_start > options["lower_date"] and \
-                           event_start < options["upper_date"]:
+                        if options["lower_date"] < event_start < options["upper_date"]:
                             attendees = event['attendees']
                             for attendee in attendees:
                                 if attendee['email'] == timetable.name:
                                     count_events += 1
-                                    event_tutor = calendar_dict[calendar]
                                     week = int(event_start.strftime("%W").lstrip("0"))
                                     week = week - options["first_week"]
                                     day = int(event_start.strftime("%w"))
                                     period = event_start.strftime("%H")
-                                    try: period = periods_dict[period]
-                                    except: period = "other"
+                                    try:
+                                        period = periods_dict[period]
+                                    except:
+                                        period = "other"
                                     data = event_name
-                                    #print(data)
-                                    try: timetable.put(value=data, period=period, day=day, week=week)
-                                    except: print("error while put()")
+                                    # print(data)
+                                    try:
+                                        timetable.put(value=data, period=period, day=day, week=week)
+                                    except:
+                                        print("error while put()")
                 except:
                     pass
 
@@ -182,8 +181,8 @@ def get_tutors():
     # It reads parameters from file: 
     # Those params are to be passed to function list_events_by_guest
     # That function will list events, filtered by params
-    options = {}
-    s = open("tutors.txt", "rt", encoding = "utf-8")
+    # options = {}
+    s = open("tutors.txt", "rt", encoding="utf-8")
     stream = list(s)
     s.close()
     tutors_list = []
@@ -193,12 +192,12 @@ def get_tutors():
     return tutors_list
 
 
-def get_options(path = "options.txt"):
+def get_options(path="options.txt"):
     # It reads parameters from file: lower_date, upper_date, group
     # Those params are to be passed to function list_events_by_param
     # That function will list events, filtered by params
     options = {}
-    s = open(path, "rt", encoding = "utf-8")
+    s = open(path, "rt", encoding="utf-8")
     stream = list(s)
     s.close()
     lower_date = stream[0].rstrip()
@@ -208,20 +207,14 @@ def get_options(path = "options.txt"):
     first_week = stream[2].rstrip()
     options["first_week"] = int(first_week)
 
-    groups = []
-    for i in range(3, len(stream)):
-        nextline = stream[i].rstrip()
-        groups.append(nextline)
-    
-    options["groups"] = groups
     return options
 
 
-def set_options(options, path = "options.txt"):
+def set_options(options, path="options.txt"):
     # It writes parameters to file: lower_date, upper_date, first_week
     try:
-        s = open(path, "wt", encoding = "utf-8")
-        
+        s = open(path, "wt", encoding="utf-8")
+
         s.write(str(options["lower_date"]) + "\n")
         s.write(str(options["upper_date"]) + "\n")
         s.write(str(options["first_week"]))
@@ -237,6 +230,7 @@ def set_options(options, path = "options.txt"):
 
 def load_default_options():
     # It writes parameters to file: lower_date, upper_date, first_week
+    default_options = {}
     try:
         default_options = get_options("default-options.txt")
     except:
@@ -259,22 +253,21 @@ def get_calendar_dict(service):
     page_token = None
     calendar_dict = {}
     while True:
-      calendar_list = service.calendarList().list(pageToken=page_token).execute()
-      for calendar_list_entry in calendar_list['items']:
-        #print(calendar_list_entry['summary'])
-          calendar_dict[calendar_list_entry['id']] = calendar_list_entry['summary']
-      page_token = calendar_list.get('nextPageToken')
-      if not page_token:
-        break
+        calendar_list = service.calendarList().list(pageToken=page_token).execute()
+        for calendar_list_entry in calendar_list['items']:
+            # print(calendar_list_entry['summary'])
+            calendar_dict[calendar_list_entry['id']] = calendar_list_entry['summary']
+        page_token = calendar_list.get('nextPageToken')
+        if not page_token:
+            break
     return calendar_dict
 
 
 # If `entrypoint` is not defined in app.yaml, App Engine will look for an app
 # called `app` in `main.py`.
 app = Flask(__name__)
-#talisman = Talisman(app)
+# talisman = Talisman(app)
 app.config['SECRET_KEY'] = 'dfg90845j6lk4djfglsdfglkrm345m567lksdf657lkopmndrumjfrt26kbtyi'
-urls_output = []
 urls = []
 
 
@@ -285,30 +278,31 @@ def index():
         if request.form.get('submit_button') == 'Do main job':
             pass
         else:
-            pass # unknown
+            pass  # unknown
     elif request.method == 'GET':
         pass
 
+    # get tutors list from file
+    tutors = []
+    try:
+        tutors = get_tutors()
+    except:
+        flash("FAILED get_tutors()")
 
-    #get tutors list from file
-    try: tutors = get_tutors()
-    except: pass
-    
     # put tutors into text area
     init_tutors = ""
     for tutor in tutors:
         init_tutors += tutor + "\n"
     init_tutors = init_tutors[:-1]
-    
+
     return render_template('index.html',
                            init_tutors=init_tutors,
-                           urls_output=urls,
                            urls=urls)
 
 
 @app.route('/options', methods=('GET', 'POST'))
 def options():
-    options=get_options()
+    options = get_options()
 
     return render_template('options.html',
                            lower_date=options["lower_date"],
@@ -318,7 +312,7 @@ def options():
 
 @app.route('/edit_options', methods=('GET', 'POST'))
 def edit_options():
-    options=get_options()
+    options = get_options()
 
     options["lower_date"] = request.form['lower_date']
     options["upper_date"] = request.form['upper_date']
@@ -354,11 +348,11 @@ def authorize():
     flow.redirect_uri = url_for('oauth2callback', _external=True)
 
     authorization_url, state = flow.authorization_url(
-      # Enable offline access so that you can refresh an access token without
-      # re-prompting the user for permission. Recommended for web server apps.
-      access_type='offline',
-      # Enable incremental authorization. Recommended as a best practice.
-      include_granted_scopes='true')
+        # Enable offline access so that you can refresh an access token without
+        # re-prompting the user for permission. Recommended for web server apps.
+        access_type='offline',
+        # Enable incremental authorization. Recommended as a best practice.
+        include_granted_scopes='true')
 
     # Store the state so the callback can verify the auth server response.
     session['state'] = state
@@ -374,7 +368,7 @@ def oauth2callback():
     state = session['state']
 
     flow = InstalledAppFlow.from_client_secrets_file(
-      CLIENT_SECRETS_FILE, scopes=SCOPES, state=state)
+        CLIENT_SECRETS_FILE, scopes=SCOPES, state=state)
     redirect_uri = url_for('oauth2callback', _external=True)
     flow.redirect_uri = redirect_uri
 
@@ -390,12 +384,16 @@ def oauth2callback():
     #              credentials in a persistent database instead.
     credentials = flow.credentials
 
-    service_calendar = build('calendar', 'v3', credentials = credentials)
-    service_sheets = build('sheets', 'v4', credentials = credentials)
-    try: options = get_options()
-    except: flash("get_options() FAILED")
+    service_calendar = build('calendar', 'v3', credentials=credentials)
+    service_sheets = build('sheets', 'v4', credentials=credentials)
 
-    #main job is here
+    options = {}
+    try:
+        options = get_options()
+    except:
+        flash("get_options() FAILED")
+
+    # main job is here
     list_timetable = list_events_by_guest(service_calendar, options)
     global urls
     urls = load_into_spreadsheet(service_sheets, list_timetable)
@@ -407,8 +405,6 @@ if __name__ == '__main__':
     # Engine, a webserver process such as Gunicorn will serve the app. This
     # can be configured by adding an `entrypoint` to app.yaml.
 
-    #app.run(host="0.0.0.0", port=5000, ssl_context=("certificate.pem", "key.pem"))
+    # app.run(host="0.0.0.0", port=5000, ssl_context=("certificate.pem", "key.pem"))
     app.run(host="127.0.0.1", port=5000, ssl_context=("certificate.pem", "key.pem"))
-    #serve(app, host='127.0.0.1', port=5000)
-
-
+    # serve(app, host='127.0.0.1', port=5000)
