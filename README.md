@@ -7,53 +7,53 @@ It is accessible at https://dispatcher-omsu.googleusercontenturl.com:5000/
 
 **Input files: options.txt**
 
-It uses parameters given in file "options.txt". 
+It uses parameters given in file "options.txt".
 
-The first line - first parameter is the start date. All events *preceding* it will be omitted.
+- The first line - first parameter is the start date. All events *preceding* it will be omitted.
 
-The second line - second parameter is the end date. All events *following* it will be omitted.
+- The second line - second parameter is the end date. All events *following* it will be omitted.
 
-The third and subsequent lines - third parameter is the list of strings to find (e. g. names of study groups). In only one string to find: All events without this string in caption will be omitted. If many lines - many strings to find - executes program many times making many output files.
+- The third line - third parameter is the starting week of the semester. Is is used in output files to enumerate weeks of semester.
 
 *Example input in options.txt*
 ```
 2021-01-01 08:00:00
 2021-12-01 00:00:00
+34
 ```
+
+This file can be modified at page /edit_options.html (accessible from top menu). This page contains interactive fields and buttons to save ptions and to restore default options.
 
 **Input files: tutors.txt**
 
-This file contais list of guests (tutors) to find
+This file contains list of guests (tutors) to find in calendars
 
-*Example input in options.txt*
+*Example input in tutors.txt*
 ```
 deminie@college.omsu.ru
 dan-909-o@college.omsu.ru
 dtn-809-o@college.omsu.ru
 ```
 
+This file can be modified at page /index.html (main page and is accessible from top menu). This page contains text area, where list of tutors may be inserted from clipboard.
+
 **Output files**
 
-Program creates google spreadsheet with timetable for given study group. If got many groups on input - it creates many timetables, one per group.
+Program creates multiple google spreadsheets with timetable for each tutor, given on input.
 
 **uses**
 ``` 
-google.oauth2.credentials
-googleapiclient.discovery
-googleapiclient.errors
-google_auth_oauthlib.flow
-
-os
-datetime
-webbrowser
+flask==2.0.1
+google==3.0.0
+google-api-python-client==2.15.0
+google_auth_oauthlib==0.4.4
 ``` 
 
 Uses googleapiclient library from
 https://github.com/googleapis/google-api-python-client
 
-**Requres**
+**Test options**
 ```
-pip install google-api-python-client
 pip install selenium
 pip install pynput
 
@@ -72,7 +72,7 @@ There are a few setup steps you need to complete before you can use this library
 
 **Features**
 ```
-## default behavior - silently run byparam
+## default behavior - silently run byguest
 list - lists all events in main calendar
 quit - quits program
 del -all - deletes all events in main calendar
