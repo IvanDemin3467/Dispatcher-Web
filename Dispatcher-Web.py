@@ -1,7 +1,6 @@
 
 from flask import Flask, render_template, request, url_for, flash, redirect, session
 from werkzeug.exceptions import abort
-from flask_talisman import Talisman
 
 from os import environ
 
@@ -32,7 +31,7 @@ periods_dict = {"08" : 1, "09" : 2, "10" : 2, "11" : 3, "12" : 3, "13" : 4,
 # days_dict translates day of the week into locl name of the day
 days_dict = {0: "Пн", 1: "Вт", 2: "Ср", 3: "Чт", 4: "Пт", 5: "Сб", 6: "Вс"}
 
-# timeteble stores all scheduled events (pairs)
+# timetable stores all scheduled events (pairs)
 class Timetable:
     def __init__(self, name="Other"):
         self.timetable = [[["" for period in range(7)]
@@ -275,6 +274,7 @@ def list_events_by_guest(service, options):
 
     return list_timetable
 
+
 def get_tutors():
     # It reads parameters from file: 
     # Those params are to be passed to function list_events_by_guest
@@ -288,6 +288,7 @@ def get_tutors():
         nextline = stream[i].rstrip()
         tutors_list.append(nextline)
     return tutors_list
+
 
 def get_options(path = "options.txt"):
     # It reads parameters from file: lower_date, upper_date, group
@@ -312,6 +313,7 @@ def get_options(path = "options.txt"):
     options["groups"] = groups
     return options
 
+
 def set_options(options, path = "options.txt"):
     # It writes parameters to file: lower_date, upper_date, first_week
     try:
@@ -328,6 +330,7 @@ def set_options(options, path = "options.txt"):
     else:
         result = "SUCCESS writing options"
     return result
+
 
 def load_default_options():
     # It writes parameters to file: lower_date, upper_date, first_week
@@ -346,6 +349,7 @@ def load_default_options():
         flash(result)
     return result
 
+
 def get_calendar_dict(service):
     # This function retrieves list of calendars for user
     # Returns dict if calendar_ID: calenar_summary
@@ -362,8 +366,6 @@ def get_calendar_dict(service):
     return calendar_dict
 
 
-
-
 # If `entrypoint` is not defined in app.yaml, App Engine will look for an app
 # called `app` in `main.py`.
 app = Flask(__name__)
@@ -371,6 +373,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dfg90845j6lk4djfglsdfglkrm345m567lksdf657lkopmndrumjfrt26kbtyi'
 urls_output = []
 urls = []
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -421,34 +424,12 @@ def edit_options():
 
     return redirect('options')
 
+
 @app.route('/set_default_options', methods=('GET', 'POST'))
 def set_default_options():
     load_default_options()
 
     return redirect('options')
-
-
-
-@app.route('/test')
-def test_api_request():
-  if 'credentials' not in session:
-    return redirect('authorize')
-
-  # Load credentials from the session.
-  credentials = google.oauth2.credentials.Credentials(
-      **session['credentials'])
-
-  youtube = googleapiclient.discovery.build(
-      API_SERVICE_NAME, API_VERSION, credentials=credentials)
-
-  channel = youtube.channels().list(mine=True, part='snippet').execute()
-
-  # Save credentials back to session in case access token was refreshed.
-  # ACTION ITEM: In a production app, you likely want to save these
-  #              credentials in a persistent database instead.
-  session['credentials'] = credentials_to_dict(credentials)
-
-  return jsonify(**channel)
 
 
 @app.route('/authorize', methods=['POST'])
@@ -480,7 +461,6 @@ def authorize():
     session['state'] = state
 
     return redirect(authorization_url)
-
 
 
 @app.route('/oauth2callback')
@@ -519,64 +499,6 @@ def oauth2callback():
     return redirect(url_for('index'))
 
 
-@app.route('/revoke')
-def revoke():
-  if 'credentials' not in session:
-    return ('You need to <a href="/authorize">authorize</a> before ' +
-            'testing the code to revoke credentials.')
-
-  credentials = google.oauth2.credentials.Credentials(
-    **session['credentials'])
-
-  revoke = requests.post('https://oauth2.googleapis.com/revoke',
-      params={'token': credentials.token},
-      headers = {'content-type': 'application/x-www-form-urlencoded'})
-
-  status_code = getattr(revoke, 'status_code')
-  if status_code == 200:
-    return('Credentials successfully revoked.' + print_index_table())
-  else:
-    return('An error occurred.' + print_index_table())
-
-
-@app.route('/clear')
-def clear_credentials():
-  if 'credentials' in session:
-    del session['credentials']
-  return ('Credentials have been cleared.<br><br>' +
-          print_index_table())
-
-
-def credentials_to_dict(credentials):
-  return {'token': credentials.token,
-          'refresh_token': credentials.refresh_token,
-          'token_uri': credentials.token_uri,
-          'client_id': credentials.client_id,
-          'client_secret': credentials.client_secret,
-          'scopes': credentials.scopes}
-
-##def print_index_table():
-##  return ('<table>' +
-##          '<tr><td><a href="/test">Test an API request</a></td>' +
-##          '<td>Submit an API request and see a formatted JSON response. ' +
-##          '    Go through the authorization flow if there are no stored ' +
-##          '    credentials for the user.</td></tr>' +
-##          '<tr><td><a href="/authorize">Test the auth flow directly</a></td>' +
-##          '<td>Go directly to the authorization flow. If there are stored ' +
-##          '    credentials, you still might not be prompted to reauthorize ' +
-##          '    the application.</td></tr>' +
-##          '<tr><td><a href="/revoke">Revoke current credentials</a></td>' +
-##          '<td>Revoke the access token associated with the current user ' +
-##          '    session. After revoking credentials, if you go to the test ' +
-##          '    page, you should see an <code>invalid_grant</code> error.' +
-##          '</td></tr>' +
-##          '<tr><td><a href="/clear">Clear Flask session credentials</a></td>' +
-##          '<td>Clear the access token currently stored in the user session. ' +
-##          '    After clearing the token, if you <a href="/test">test the ' +
-##          '    API request</a> again, you should go back to the auth flow.' +
-##          '</td></tr></table>')
-
-
 if __name__ == '__main__':
     # This is used when running locally only. When deploying to Google App
     # Engine, a webserver process such as Gunicorn will serve the app. This
@@ -585,8 +507,5 @@ if __name__ == '__main__':
     #app.run(host="0.0.0.0", port=5000, ssl_context=("certificate.pem", "key.pem"))
     app.run(host="127.0.0.1", port=5000, ssl_context=("certificate.pem", "key.pem"))
     #serve(app, host='127.0.0.1', port=5000)
-# [END gae_python3_app]
-# [END gae_python38_app]
-    #app.run(host="0.0.0.0", port=5000, ssl_context="adhoc")
 
 

@@ -2,4 +2,3 @@ flask==2.0.1
 google==3.0.0
 google-api-python-client==2.15.0
 google_auth_oauthlib==0.4.4
-flask-talisman==0.8.1
