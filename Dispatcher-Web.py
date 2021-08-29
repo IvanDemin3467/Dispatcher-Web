@@ -123,13 +123,11 @@ def list_events_by_guest(service, query):
     """
     Input is Google Calendar service and parameters of query
     It makes API call to Calendar , gets all events from all calendars and filters them according to query
+    Returns list of timetables, one per tutor
     """
-    # Same as byparam, but makes timetable for given guest (tutor)
-    # lists all events in main calendar which are between two dates, given in options
-    # Also it filters events by name of guest (tutor)
-    page_token = None
+    page_token = None  # API returns evens in pages, so we have to iterate through them
 
-    tutors = tutors_input.split("\r\n")
+    tutors = tutors_input.split("\r\n")  # Get tutors from from UI (tutors_input is a global variable)
 
     # init timetables
     list_timetable = []
@@ -143,10 +141,10 @@ def list_events_by_guest(service, query):
     # get events
     flash("******************** Working on: get all events from all calendars ********************")
     count_events = 0
-    for calendar in calendar_dict:
-        while True:
+    for calendar in calendar_dict:  # Iterate through calendars for given user. Calendars store timetables for groups
+        while True:  # Iterate through pages in calendar
             events = service.events().list(calendarId=calendar, pageToken=page_token, singleEvents=True).execute()
-            for event in events['items']:
+            for event in events['items']:  # Iterate through events in a page of calendar
                 try:
                     event_name = event['summary']
                     event_start = datetime.strptime(event['start']['dateTime'], "%Y-%m-%dT%H:%M:%S+06:00")
@@ -158,24 +156,28 @@ def list_events_by_guest(service, query):
                         for attendee in attendees:
                             if attendee['email'] == timetable.name:
                                 count_events += 1
-                                try:
+
+                                try:  # week
                                     week = int(event_start.strftime("%W").lstrip("0"))
                                     week = week - query["first_week"]
                                 except:
                                     week = 0
                                     flash(timetable.name + ". Error with week")
-                                try:
+
+                                try:  # day
                                     day = int(event_start.strftime("%w"))
                                 except:
                                     day = 0
                                     flash(timetable.name + ". Error with day")
-                                try:
+
+                                try:  # period
                                     period = event_start.strftime("%H")
                                     period = periods_dict[period]
                                 except:
                                     period = 7
                                     flash(timetable.name + ". Error with period")
-                                try:
+
+                                try:  # put
                                     timetable.put(value=event_name, period=period, day=day, week=week)
                                 except:
                                     flash(timetable.name + ". Error while put()")
@@ -189,10 +191,12 @@ def list_events_by_guest(service, query):
 
 
 def get_tutors():
-    # It reads parameters from file: 
-    # Those params are to be passed to function list_events_by_guest
-    # That function will list events, filtered by params
-    # options = {}
+    """
+    It reads tutors list from file:
+    Those params are to be passed to function list_events_by_guest()
+    That function will list events for given tutors
+    """
+
     s = open("tutors.txt", "rt", encoding="utf-8")
     stream = list(s)
     s.close()
@@ -204,31 +208,56 @@ def get_tutors():
 
 
 def get_options(path="options.txt"):
-    # It reads parameters from file: lower_date, upper_date, group
-    # Those params are to be passed to function list_events_by_param
-    # That function will list events, filtered by params
+    """
+    It reads parameters for query from file: lower_date, upper_date, first_week
+    Those params are to be passed to function list_events_by_guest()
+    which lists events, filtered by params
+    Input = file name
+    Output = dict of options
+    """
+
     options = {}
-    s = open(path, "rt", encoding="utf-8")
-    stream = list(s)
-    s.close()
-    lower_date = stream[0].rstrip()
-    options["lower_date"] = datetime.strptime(lower_date, "%Y-%m-%d %H:%M:%S")
-    upper_date = stream[1].rstrip()
-    options["upper_date"] = datetime.strptime(upper_date, "%Y-%m-%d %H:%M:%S")
-    first_week = stream[2].rstrip()
-    options["first_week"] = int(first_week)
+
+    try:
+        s = open(path, "rt", encoding="utf-8")
+        stream = list(s)
+        s.close()
+    except:
+        flash("Error while dealing with file " + path)
+
+    try:  # lower_date
+        lower_date = stream[0].rstrip()
+        options["lower_date"] = datetime.strptime(lower_date, "%Y-%m-%d %H:%M:%S")
+    except:
+        flash("Error while reading lower_date from" + path)
+
+    try:  # upper_date
+        upper_date = stream[1].rstrip()
+        options["upper_date"] = datetime.strptime(upper_date, "%Y-%m-%d %H:%M:%S")
+    except:
+        flash("Error while reading upper_date from" + path)
+
+    try:  # first_week
+        first_week = stream[2].rstrip()
+        options["first_week"] = int(first_week)
+    except:
+        flash("Error while reading first_week from" + path)
 
     return options
 
 
-def set_options(options, path="options.txt"):
-    # It writes parameters to file: lower_date, upper_date, first_week
+def set_options(query, path="options.txt"):
+    """
+    It writes parameters of query to file: lower_date, upper_date, first_week
+    Input: query = dict of parameters
+    Output: result = string for success/fail message
+    """
     try:
         s = open(path, "wt", encoding="utf-8")
 
-        s.write(str(options["lower_date"]) + "\n")
-        s.write(str(options["upper_date"]) + "\n")
-        s.write(str(options["first_week"]))
+        s.write(str(query["lower_date"]) + "\n")
+        s.write(str(query["upper_date"]) + "\n")
+        s.write(str(query["first_week"]))
 
         s.close()
     except:
@@ -240,33 +269,39 @@ def set_options(options, path="options.txt"):
 
 
 def load_default_options():
-    # It writes parameters to file: lower_date, upper_date, first_week
+    """
+    It writes parameters of one file (default options) to another (options): lower_date, upper_date, first_week
+    Input: None
+    Output: result = string for success/fail message
+    """
     default_options = {}
     try:
         default_options = get_options("default-options.txt")
     except:
-        result = "FAILED reading default options"
+        result = "FAILED reading default options from file"
         flash(result)
     else:
-        result = "SUCCESS reading default options"
+        result = "SUCCESS reading default options from file"
 
     try:
         set_options(default_options)
     except:
-        result = "FAILED writing default options"
+        result = "FAILED restoring default options"
         flash(result)
     return result
 
 
 def get_calendar_dict(service):
-    # This function retrieves list of calendars for user
-    # Returns dict if calendar_ID: calenar_summary
+    """
+    This function retrieves list of calendars for user
+    Input: service = handle for Calendar service
+    Return: calendar_dict = dict of items {calendar_ID: calendar_summary}
+    """
     page_token = None
     calendar_dict = {}
-    while True:
+    while True:  # Iterate through pages in calendar_list
         calendar_list = service.calendarList().list(pageToken=page_token).execute()
         for calendar_list_entry in calendar_list['items']:
-            # print(calendar_list_entry['summary'])
             calendar_dict[calendar_list_entry['id']] = calendar_list_entry['summary']
         page_token = calendar_list.get('nextPageToken')
         if not page_token:
@@ -274,25 +309,21 @@ def get_calendar_dict(service):
     return calendar_dict
 
 
-# If `entrypoint` is not defined in app.yaml, App Engine will look for an app
-# called `app` in `main.py`.
+# If `entrypoint` is not defined in app.yaml, App Engine will look for an app called `app` in `main.py`.
 app = Flask(__name__)
-# talisman = Talisman(app)
 app.config['SECRET_KEY'] = 'dfg90845j6lk4djfglsdfglkrm345m567lksdf657lkopmndrumjfrt26kbtyi'
-urls = []
+
+urls = []  # Global variable that stores list of urls for created spreadsheets (for UI)
+tutors_input = []  # Global variable that stores list of tutors (for UI)
 
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    i = 1
-    if request.method == 'POST':
-        if request.form.get('submit_button') == 'Do main job':
-            pass
-        else:
-            pass  # unknown
-    elif request.method == 'GET':
-        pass
-
+    """
+    This is main window of application
+    There is a text area that contain list of tutors to work with
+    There is a list of urls - result of application's work
+    """
     # get tutors list from file
     tutors = []
     try:
@@ -304,7 +335,7 @@ def index():
     init_tutors = ""
     for tutor in tutors:
         init_tutors += tutor + "\n"
-    init_tutors = init_tutors[:-1]
+    init_tutors = init_tutors[:-1]  # Remove last caret return
 
     return render_template('index.html',
                            init_tutors=init_tutors,
@@ -313,7 +344,12 @@ def index():
 
 @app.route('/options', methods=('GET', 'POST'))
 def options():
-    options = get_options()
+    """
+    This is second window of applications
+    Here user can change options and save them
+    Also there is a button to load default options
+    """
+    options = get_options()  ## Read options from file
 
     return render_template('options.html',
                            lower_date=options["lower_date"],
@@ -323,11 +359,12 @@ def options():
 
 @app.route('/edit_options', methods=('GET', 'POST'))
 def edit_options():
-    options = get_options()
+    """
+    This function saves options from form to a file
+    """
+    options = {"lower_date": request.form['lower_date'], "upper_date": request.form['upper_date'],
+               "first_week": request.form['first_week']}
 
-    options["lower_date"] = request.form['lower_date']
-    options["upper_date"] = request.form['upper_date']
-    options["first_week"] = request.form['first_week']
     set_options(options)
 
     return redirect('options')
@@ -335,6 +372,9 @@ def edit_options():
 
 @app.route('/set_default_options', methods=('GET', 'POST'))
 def set_default_options():
+    """
+    This function restores default options a file
+    """
     load_default_options()
 
     return redirect('options')
@@ -342,14 +382,17 @@ def set_default_options():
 
 @app.route('/authorize', methods=['POST'])
 def authorize():
-    # The CLIENT_SECRETS_FILE variable specifies the name of a file that contains
-    # the OAuth 2.0 information for this application, including its client_id and
-    # client_secret.
+    """
+    This function handles authorization
+    It creates all necessary objects and redirects user to authorization page
+    """
 
     global tutors_input
     tutors_input = request.form['tutors_input']
 
-    # Do auth
+    # Create flow object that will handle authorization
+    # The CLIENT_SECRETS_FILE variable specifies the name of a file that contains the OAuth 2.0 information
+    # for this application, including its client_id and client_secret.
     flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRETS_FILE, SCOPES)
 
     # The URI created here must exactly match one of the authorized redirect URIs
@@ -373,11 +416,16 @@ def authorize():
 
 @app.route('/oauth2callback')
 def oauth2callback():
-    # Specify the state when creating the flow in the callback so that it can
+    """
+    This function handles callback from oauth server
+    It gets credentials and launch main job (loading timetables to spreadsheets)
+    """
+    # Specify the state when creating the flow in the callback so that it can be
     # verified in the authorization server response.
     environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
     state = session['state']
 
+    # Create flow object that will handle authorization response
     flow = InstalledAppFlow.from_client_secrets_file(
         CLIENT_SECRETS_FILE, scopes=SCOPES, state=state)
     redirect_uri = url_for('oauth2callback', _external=True)
@@ -395,9 +443,11 @@ def oauth2callback():
     #              credentials in a persistent database instead.
     credentials = flow.credentials
 
+    # Creates handles for Google Calendar and Google Spreadsheets
     service_calendar = build('calendar', 'v3', credentials=credentials)
     service_sheets = build('sheets', 'v4', credentials=credentials)
 
+    # Load options from file
     options = {}
     try:
         options = get_options()
