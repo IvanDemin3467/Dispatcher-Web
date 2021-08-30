@@ -65,7 +65,8 @@ class Timetable:
                     row.append(value)
 
                 complete_list.append(row)
-            if empty_week: del complete_list[-9:]  # Do not print empty weeks
+            if empty_week:
+                del complete_list[-9:]  # Do not print empty weeks
         return complete_list
 
 
@@ -148,7 +149,7 @@ def list_events_by_guest(service, query):
                 try:
                     event_name = event['summary']
                     event_start = datetime.strptime(event['start']['dateTime'], "%Y-%m-%dT%H:%M:%S+06:00")
-                except:
+                except BaseException:
                     break
                 for timetable in list_timetable:
                     if query["lower_date"] < event_start < query["upper_date"]:
@@ -224,6 +225,7 @@ def get_options(path="options.txt"):
         s.close()
     except:
         flash("Error while dealing with file " + path)
+        return options
 
     try:  # lower_date
         lower_date = stream[0].rstrip()
