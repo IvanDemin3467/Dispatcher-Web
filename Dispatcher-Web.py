@@ -68,6 +68,7 @@ class Timetable:
         return complete_list
 
 
+# Dispatcher makes API calls
 class Dispatcher():
     def __init__(self):
         self.options_path = "options.txt"
@@ -220,8 +221,8 @@ class Dispatcher():
         s.close()
         self.tutors_list = []
         for i in range(0, len(stream)):
-            nextline = stream[i].rstrip()
-            self.tutors_list.append(nextline)
+            next_line = stream[i].rstrip()
+            self.tutors_list.append(next_line)
         return self.tutors_list
 
     def get_options(self, path="options.txt"):
@@ -263,12 +264,30 @@ class Dispatcher():
 
         return self.options
 
-    def set_options(self, path="options.txt"):
+    def set_options(self, input_options, path="options.txt"):
         """
         It writes parameters of query to file: lower_date, upper_date, first_week
         Input: query = dict of parameters
         Output: result = string for success/fail message
         """
+        try:  # lower_date
+            lower_date = input_options["lower_date"].rstrip()
+            self.options["lower_date"] = datetime.strptime(lower_date, "%Y-%m-%d %H:%M:%S")
+        except:
+            flash("Error while converting lower_date from input_options")
+
+        try:  # upper_date
+            upper_date = input_options["upper_date"].rstrip()
+            self.options["upper_date"] = datetime.strptime(upper_date, "%Y-%m-%d %H:%M:%S")
+        except:
+            flash("Error while converting upper_date from input_options")
+
+        try:  # first_week
+            first_week = input_options["first_week"].rstrip()
+            self.options["first_week"] = int(first_week)
+        except:
+            flash("Error while converting first_week from input_options")
+
         try:
             s = open(path, "wt", encoding="utf-8")
 
@@ -292,7 +311,7 @@ class Dispatcher():
         """
         default_options = {}
         try:
-            default_options = self.get_options("default-options.txt")
+            default_options = self.get_options(self.default_options_path)
         except:
             result = "FAILED reading default options from file"
             flash(result)
@@ -300,10 +319,19 @@ class Dispatcher():
             result = "SUCCESS reading default options from file"
 
         try:
-            self.set_options(self, default_options)
+            s = open(self.options_path, "wt", encoding="utf-8")
+
+            s.write(str(default_options["lower_date"]) + "\n")
+            s.write(str(default_options["upper_date"]) + "\n")
+            s.write(str(default_options["first_week"]))
+
+            s.close()
         except:
-            result = "FAILED restoring default options"
+            result = "FAILED writing options"
             flash(result)
+        else:
+            result = "SUCCESS writing options"
+
         return result
 
     def get_calendar_dict(self):
@@ -324,253 +352,9 @@ class Dispatcher():
         return self.calendar_dict
 
 
-# def load_into_spreadsheet(service, list_timetable):
-#     """
-#     Input is: spreadsheet service and list of timetable objects
-#     It calls the Sheets API, creates new spreadsheets and loads data from timetables into spreadsheets
-#     Outputs list of links to created spreadsheets
-#     """
-#
-#     # list of urls to output
-#     global urls
-#     urls = []
-#
-#     for timetable in list_timetable:
-#         flash("******************** Working on: timetable for: " + timetable.name + " ********************")
-#
-#         # Create spreadsheet
-#         spreadsheet = {
-#             'properties': {
-#                 'title': timetable.name + datetime.now().strftime("-%Y-%m-%d-%H-%M-%S")
-#             }
-#         }
-#         spreadsheet = service.spreadsheets().create(body=spreadsheet, fields='spreadsheetId').execute()
-#         spreadsheet_id = spreadsheet.get('spreadsheetId')
-#
-#         # Get into the first page in a spreadsheet
-#         range_name = "Лист1!A1"
-#
-#         # Load values from timetable in appropriate format for spreadsheet
-#         values = timetable.get_list()
-#         body = {
-#             'values': values
-#         }
-#         value_input_option = "USER_ENTERED"
-#
-#         # Push values into spreadsheet via API
-#         result = service.spreadsheets().values().update(
-#             spreadsheetId=spreadsheet_id, range=range_name,
-#             valueInputOption=value_input_option, body=body).execute()
-#
-#         # How many cells updated?
-#         flash('{0} cells updated.'.format(result.get('updatedCells')))
-#
-#         # The link to the result
-#         url = "https://docs.google.com/spreadsheets/d/" + spreadsheet_id
-#         flash(url)
-#
-#         # prepare the output
-#         urls.append({timetable.name.split("@")[0]: url})
-#     return urls
-#
-#
-# def list_events_by_guest(service, query):
-#     """
-#     Input is Google Calendar service and parameters of query
-#     It makes API call to Calendar , gets all events from all calendars and filters them according to query
-#     Returns list of timetables, one per tutor
-#     """
-#     page_token = None  # API returns evens in pages, so we have to iterate through them
-#
-#     tutors = tutors_input.split("\r\n")  # Get tutors from from UI (tutors_input is a global variable)
-#
-#     # init timetables
-#     list_timetable = []
-#     for tutor in tutors:
-#         timetable = Timetable(tutor)
-#         list_timetable.append(timetable)
-#
-#     # get calendar list
-#     calendar_dict = get_calendar_dict(service)
-#
-#     # get events
-#     flash("******************** Working on: get all events from all calendars ********************")
-#     count_events = 0
-#     for calendar in calendar_dict:  # Iterate through calendars for given user. Calendars store timetables for groups
-#         while True:  # Iterate through pages in calendar
-#             events = service.events().list(calendarId=calendar, pageToken=page_token, singleEvents=True).execute()
-#             for event in events['items']:  # Iterate through events in a page of calendar
-#                 try:
-#                     event_name = event['summary']
-#                     event_start = datetime.strptime(event['start']['dateTime'], "%Y-%m-%dT%H:%M:%S+06:00")
-#                 except BaseException:
-#                     break
-#                 for timetable in list_timetable:
-#                     if query["lower_date"] < event_start < query["upper_date"]:
-#                         attendees = event['attendees']
-#                         for attendee in attendees:
-#                             if attendee['email'] == timetable.name:
-#                                 count_events += 1
-#
-#                                 try:  # week
-#                                     week = int(event_start.strftime("%W").lstrip("0"))
-#                                     week = week - query["first_week"]
-#                                 except:
-#                                     week = 0
-#                                     flash(timetable.name + ". Error with week")
-#
-#                                 try:  # day
-#                                     day = int(event_start.strftime("%w"))
-#                                 except:
-#                                     day = 0
-#                                     flash(timetable.name + ". Error with day")
-#
-#                                 try:  # period
-#                                     period = event_start.strftime("%H")
-#                                     period = periods_dict[period]
-#                                 except:
-#                                     period = 7
-#                                     flash(timetable.name + ". Error with period")
-#
-#                                 try:  # put
-#                                     timetable.put(value=event_name, period=period, day=day, week=week)
-#                                 except:
-#                                     flash(timetable.name + ". Error while put()")
-#
-#             page_token = events.get('nextPageToken')
-#             if not page_token:
-#                 break
-#     flash(f"Got {count_events} events for {len(list_timetable)} tutors")
-#
-#     return list_timetable
-#
-#
-# def get_tutors():
-#     """
-#     It reads tutors list from file:
-#     Those params are to be passed to function list_events_by_guest()
-#     That function will list events for given tutors
-#     """
-#
-#     s = open("tutors.txt", "rt", encoding="utf-8")
-#     stream = list(s)
-#     s.close()
-#     tutors_list = []
-#     for i in range(0, len(stream)):
-#         nextline = stream[i].rstrip()
-#         tutors_list.append(nextline)
-#     return tutors_list
-#
-#
-# def get_options(path="options.txt"):
-#     """
-#     It reads parameters for query from file: lower_date, upper_date, first_week
-#     Those params are to be passed to function list_events_by_guest()
-#     which lists events, filtered by params
-#     Input = file name
-#     Output = dict of options
-#     """
-#
-#     options = {}
-#
-#     try:
-#         s = open(path, "rt", encoding="utf-8")
-#         stream = list(s)
-#         s.close()
-#     except:
-#         flash("Error while dealing with file " + path)
-#         return options
-#
-#     try:  # lower_date
-#         lower_date = stream[0].rstrip()
-#         options["lower_date"] = datetime.strptime(lower_date, "%Y-%m-%d %H:%M:%S")
-#     except:
-#         flash("Error while reading lower_date from" + path)
-#
-#     try:  # upper_date
-#         upper_date = stream[1].rstrip()
-#         options["upper_date"] = datetime.strptime(upper_date, "%Y-%m-%d %H:%M:%S")
-#     except:
-#         flash("Error while reading upper_date from" + path)
-#
-#     try:  # first_week
-#         first_week = stream[2].rstrip()
-#         options["first_week"] = int(first_week)
-#     except:
-#         flash("Error while reading first_week from" + path)
-#
-#     return options
-#
-#
-# def set_options(query, path="options.txt"):
-#     """
-#     It writes parameters of query to file: lower_date, upper_date, first_week
-#     Input: query = dict of parameters
-#     Output: result = string for success/fail message
-#     """
-#     try:
-#         s = open(path, "wt", encoding="utf-8")
-#
-#         s.write(str(query["lower_date"]) + "\n")
-#         s.write(str(query["upper_date"]) + "\n")
-#         s.write(str(query["first_week"]))
-#
-#         s.close()
-#     except:
-#         result = "FAILED writing options"
-#         flash(result)
-#     else:
-#         result = "SUCCESS writing options"
-#     return result
-#
-#
-# def load_default_options():
-#     """
-#     It writes parameters of one file (default options) to another (options): lower_date, upper_date, first_week
-#     Input: None
-#     Output: result = string for success/fail message
-#     """
-#     default_options = {}
-#     try:
-#         default_options = get_options("default-options.txt")
-#     except:
-#         result = "FAILED reading default options from file"
-#         flash(result)
-#     else:
-#         result = "SUCCESS reading default options from file"
-#
-#     try:
-#         set_options(default_options)
-#     except:
-#         result = "FAILED restoring default options"
-#         flash(result)
-#     return result
-#
-#
-# def get_calendar_dict(service):
-#     """
-#     This function retrieves list of calendars for user
-#     Input: service = handle for Calendar service
-#     Return: calendar_dict = dict of items {calendar_ID: calendar_summary}
-#     """
-#     page_token = None
-#     calendar_dict = {}
-#     while True:  # Iterate through pages in calendar_list
-#         calendar_list = service.calendarList().list(pageToken=page_token).execute()
-#         for calendar_list_entry in calendar_list['items']:
-#             calendar_dict[calendar_list_entry['id']] = calendar_list_entry['summary']
-#         page_token = calendar_list.get('nextPageToken')
-#         if not page_token:
-#             break
-#     return calendar_dict
-
-
-# If `entrypoint` is not defined in app.yaml, App Engine will look for an app called `app` in `main.py`.
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'dfg90845j6lk4djfglsdfglkrm345m567lksdf657lkopmndrumjfrt26kbtyi'
+app.config['SECRET_KEY'] = 'dfg90845j6lk4daffodils345m567lk3sdf657lk5op8mn4drum6jf0rt26kb3tyi'
 
-# urls = []  # Global variable that stores list of urls for created spreadsheets (for UI)
-# tutors_input = []  # Global variable that stores list of tutors (for UI)
 
 dispatcher = Dispatcher()
 
@@ -582,13 +366,6 @@ def index():
     There is a list of urls - result of application's work
     """
     global dispatcher
-
-    # # get tutors list from file
-    # tutors = []
-    # try:
-    #     tutors = dispatcher.get_tutors()
-    # except:
-    #     flash("FAILED get_tutors()")
 
     # put tutors into text area
     init_tutors = ""
@@ -609,8 +386,6 @@ def options():
     Also there is a button to load default options
     """
     global dispatcher
-
-    # options = dispatcher.get_options()  # Read options from file
 
     return render_template('options.html',
                            lower_date=dispatcher.options["lower_date"],
