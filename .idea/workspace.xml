@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="7a7d42bb-8016-42a3-a6c7-09ffd144c1c8" name="Changes" comment="Comments and refactoring">
+    <list default="true" id="7a7d42bb-8016-42a3-a6c7-09ffd144c1c8" name="Changes" comment="From procedural approach to object-oriented approach">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Dispatcher-Web.py" beforeDir="false" afterPath="$PROJECT_DIR$/Dispatcher-Web.py" afterDir="false" />
     </list>
@@ -102,7 +102,14 @@
       <option name="project" value="LOCAL" />
       <updated>1630322814901</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="From procedural approach to object-oriented approach">
+      <created>1630408753371</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1630408753371</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -122,6 +129,7 @@
     <MESSAGE value="Refactoring" />
     <MESSAGE value="Comments and exceptions handling" />
     <MESSAGE value="Comments and refactoring" />
-    <option name="LAST_COMMIT_MESSAGE" value="Comments and refactoring" />
+    <MESSAGE value="From procedural approach to object-oriented approach" />
+    <option name="LAST_COMMIT_MESSAGE" value="From procedural approach to object-oriented approach" />
   </component>
 </project>

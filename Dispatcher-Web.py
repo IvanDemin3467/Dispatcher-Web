@@ -14,11 +14,7 @@ CLIENT_SECRETS_FILE = "client_secret.json"
 SCOPES = ['https://www.googleapis.com/auth/calendar',
           'https://www.googleapis.com/auth/spreadsheets']
 
-# periods_dict translates hour of the day into period of the day
-periods_dict = {"08": 1, "09": 2, "10": 2, "11": 3, "12": 3, "13": 4,
-                "14": 4, "15": 5, "16": 5, "17": 6, "18": 7, "19": 7}
-# days_dict translates day of the week into local name of the day
-days_dict = {0: "Пн", 1: "Вт", 2: "Ср", 3: "Чт", 4: "Пт", 5: "Сб", 6: "Вс"}
+
 
 
 # timetable stores all scheduled events (pairs)
@@ -32,6 +28,8 @@ class Timetable:
                            for day in range(7)]
                           for week in range(53)]
         self.name = name
+        # days_dict translates day of the week into local name of the day
+        self.days_dict = {0: "Пн", 1: "Вт", 2: "Ср", 3: "Чт", 4: "Пт", 5: "Сб", 6: "Вс"}
 
     def put(self, value, period, day, week):
         """
@@ -55,7 +53,7 @@ class Timetable:
             complete_list.append(["Неделя: " + str(week + 1), "", "", "", "", "", "", ""])
             complete_list.append(["", "Пара 1", "Пара 2", "Пара 3", "Пара 4", "Пара 5", "Пара 6", "Пара 7"])
             for day in range(7):
-                row = [days_dict[day]]
+                row = [self.days_dict[day]]
                 for period in range(7):
                     value = self.timetable[week][day][period]
                     if value == "":
@@ -71,11 +69,26 @@ class Timetable:
 
 
 class Dispatcher():
-
     def __init__(self):
-        pass
+        self.options_path = "options.txt"
+        self.default_options_path = "default-options.txt"
+        self.tutors_path = "tutors.txt"
 
-    def load_into_spreadsheet(self, service, list_timetable):
+        self.options = self.get_options()
+        self.tutors = self.get_tutors()
+        self.calendar_dict = {}
+
+        self.urls = []
+        self.list_timetable = []
+        self.service_spreadsheet = None
+        self.service_calendar = None
+
+        # periods_dict translates hour of the day into period of the day
+        self.periods_dict = {"08": 1, "09": 2, "10": 2, "11": 3, "12": 3, "13": 4,
+                        "14": 4, "15": 5, "16": 5, "17": 6, "18": 7, "19": 7}
+
+
+    def load_into_spreadsheet(self):
         """
         Input is: spreadsheet service and list of timetable objects
         It calls the Sheets API, creates new spreadsheets and loads data from timetables into spreadsheets
@@ -83,10 +96,9 @@ class Dispatcher():
         """
 
         # list of urls to output
-        global urls
-        urls = []
+        self.urls = []
 
-        for timetable in list_timetable:
+        for timetable in self.list_timetable:
             flash("******************** Working on: timetable for: " + timetable.name + " ********************")
 
             # Create spreadsheet
@@ -95,7 +107,8 @@ class Dispatcher():
                     'title': timetable.name + datetime.now().strftime("-%Y-%m-%d-%H-%M-%S")
                 }
             }
-            spreadsheet = service.spreadsheets().create(body=spreadsheet, fields='spreadsheetId').execute()
+            spreadsheet = self.service_spreadsheet.spreadsheets().create(body=spreadsheet,
+                                                                         fields='spreadsheetId').execute()
             spreadsheet_id = spreadsheet.get('spreadsheetId')
 
             # Get into the first page in a spreadsheet
@@ -109,7 +122,7 @@ class Dispatcher():
             value_input_option = "USER_ENTERED"
 
             # Push values into spreadsheet via API
-            result = service.spreadsheets().values().update(
+            result = self.service_spreadsheet.spreadsheets().values().update(
                 spreadsheetId=spreadsheet_id, range=range_name,
                 valueInputOption=value_input_option, body=body).execute()
 
@@ -121,10 +134,10 @@ class Dispatcher():
             flash(url)
 
             # prepare the output
-            urls.append({timetable.name.split("@")[0]: url})
-        return urls
+            self.urls.append({timetable.name.split("@")[0]: url})
+        return self.urls
 
-    def list_events_by_guest(self, service, query):
+    def list_events_by_guest(self):
         """
         Input is Google Calendar service and parameters of query
         It makes API call to Calendar , gets all events from all calendars and filters them according to query
@@ -132,23 +145,23 @@ class Dispatcher():
         """
         page_token = None  # API returns evens in pages, so we have to iterate through them
 
-        tutors = tutors_input.split("\r\n")  # Get tutors from from UI (tutors_input is a global variable)
+        # tutors = tutors_input.split("\r\n")  # Get tutors from from UI (tutors_input is a global variable)
 
         # init timetables
-        list_timetable = []
-        for tutor in tutors:
+        self.list_timetable = []
+        for tutor in self.tutors:
             timetable = Timetable(tutor)
-            list_timetable.append(timetable)
+            self.list_timetable.append(timetable)
 
         # get calendar list
-        calendar_dict = dispatcher.get_calendar_dict(service)
+        self.calendar_dict = dispatcher.get_calendar_dict()
 
         # get events
         flash("******************** Working on: get all events from all calendars ********************")
         count_events = 0
-        for calendar in calendar_dict:  # Iterate through calendars for given user. Calendars store timetables for groups
+        for calendar in self.calendar_dict:  # Iterate through calendars. Calendars store timetables for groups
             while True:  # Iterate through pages in calendar
-                events = service.events().list(calendarId=calendar, pageToken=page_token,
+                events = self.service_calendar.events().list(calendarId=calendar, pageToken=page_token,
                                                singleEvents=True).execute()
                 for event in events['items']:  # Iterate through events in a page of calendar
                     try:
@@ -156,8 +169,8 @@ class Dispatcher():
                         event_start = datetime.strptime(event['start']['dateTime'], "%Y-%m-%dT%H:%M:%S+06:00")
                     except BaseException:
                         break
-                    for timetable in list_timetable:
-                        if query["lower_date"] < event_start < query["upper_date"]:
+                    for timetable in self.list_timetable:
+                        if self.options["lower_date"] < event_start < self.options["upper_date"]:
                             attendees = event['attendees']
                             for attendee in attendees:
                                 if attendee['email'] == timetable.name:
@@ -165,7 +178,7 @@ class Dispatcher():
 
                                     try:  # week
                                         week = int(event_start.strftime("%W").lstrip("0"))
-                                        week = week - query["first_week"]
+                                        week = week - self.options["first_week"]
                                     except:
                                         week = 0
                                         flash(timetable.name + ". Error with week")
@@ -178,7 +191,7 @@ class Dispatcher():
 
                                     try:  # period
                                         period = event_start.strftime("%H")
-                                        period = periods_dict[period]
+                                        period = self.periods_dict[period]
                                     except:
                                         period = 7
                                         flash(timetable.name + ". Error with period")
@@ -191,9 +204,9 @@ class Dispatcher():
                 page_token = events.get('nextPageToken')
                 if not page_token:
                     break
-        flash(f"Got {count_events} events for {len(list_timetable)} tutors")
+        flash(f"Got {count_events} events for {len(self.list_timetable)} tutors")
 
-        return list_timetable
+        return self.list_timetable
 
     def get_tutors(self):
         """
@@ -205,11 +218,11 @@ class Dispatcher():
         s = open("tutors.txt", "rt", encoding="utf-8")
         stream = list(s)
         s.close()
-        tutors_list = []
+        self.tutors_list = []
         for i in range(0, len(stream)):
             nextline = stream[i].rstrip()
-            tutors_list.append(nextline)
-        return tutors_list
+            self.tutors_list.append(nextline)
+        return self.tutors_list
 
     def get_options(self, path="options.txt"):
         """
@@ -220,7 +233,7 @@ class Dispatcher():
         Output = dict of options
         """
 
-        options = {}
+        self.options = {}
 
         try:
             s = open(path, "rt", encoding="utf-8")
@@ -228,29 +241,29 @@ class Dispatcher():
             s.close()
         except:
             flash("Error while dealing with file " + path)
-            return options
+            return self.optionsoptions
 
         try:  # lower_date
             lower_date = stream[0].rstrip()
-            options["lower_date"] = datetime.strptime(lower_date, "%Y-%m-%d %H:%M:%S")
+            self.options["lower_date"] = datetime.strptime(lower_date, "%Y-%m-%d %H:%M:%S")
         except:
             flash("Error while reading lower_date from" + path)
 
         try:  # upper_date
             upper_date = stream[1].rstrip()
-            options["upper_date"] = datetime.strptime(upper_date, "%Y-%m-%d %H:%M:%S")
+            self.options["upper_date"] = datetime.strptime(upper_date, "%Y-%m-%d %H:%M:%S")
         except:
             flash("Error while reading upper_date from" + path)
 
         try:  # first_week
             first_week = stream[2].rstrip()
-            options["first_week"] = int(first_week)
+            self.options["first_week"] = int(first_week)
         except:
             flash("Error while reading first_week from" + path)
 
-        return options
+        return self.options
 
-    def set_options(self, query, path="options.txt"):
+    def set_options(self, path="options.txt"):
         """
         It writes parameters of query to file: lower_date, upper_date, first_week
         Input: query = dict of parameters
@@ -259,9 +272,9 @@ class Dispatcher():
         try:
             s = open(path, "wt", encoding="utf-8")
 
-            s.write(str(query["lower_date"]) + "\n")
-            s.write(str(query["upper_date"]) + "\n")
-            s.write(str(query["first_week"]))
+            s.write(str(self.options["lower_date"]) + "\n")
+            s.write(str(self.options["upper_date"]) + "\n")
+            s.write(str(self.options["first_week"]))
 
             s.close()
         except:
@@ -279,7 +292,7 @@ class Dispatcher():
         """
         default_options = {}
         try:
-            default_options = get_options("default-options.txt")
+            default_options = self.get_options("default-options.txt")
         except:
             result = "FAILED reading default options from file"
             flash(result)
@@ -287,28 +300,28 @@ class Dispatcher():
             result = "SUCCESS reading default options from file"
 
         try:
-            set_options(self, default_options)
+            self.set_options(self, default_options)
         except:
             result = "FAILED restoring default options"
             flash(result)
         return result
 
-    def get_calendar_dict(self, service):
+    def get_calendar_dict(self):
         """
         This function retrieves list of calendars for user
         Input: service = handle for Calendar service
         Return: calendar_dict = dict of items {calendar_ID: calendar_summary}
         """
         page_token = None
-        calendar_dict = {}
+        self.calendar_dict = {}
         while True:  # Iterate through pages in calendar_list
-            calendar_list = service.calendarList().list(pageToken=page_token).execute()
+            calendar_list = self.service_calendar.calendarList().list(pageToken=page_token).execute()
             for calendar_list_entry in calendar_list['items']:
-                calendar_dict[calendar_list_entry['id']] = calendar_list_entry['summary']
+                self.calendar_dict[calendar_list_entry['id']] = calendar_list_entry['summary']
             page_token = calendar_list.get('nextPageToken')
             if not page_token:
                 break
-        return calendar_dict
+        return self.calendar_dict
 
 
 # def load_into_spreadsheet(service, list_timetable):
@@ -556,8 +569,8 @@ class Dispatcher():
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dfg90845j6lk4djfglsdfglkrm345m567lksdf657lkopmndrumjfrt26kbtyi'
 
-urls = []  # Global variable that stores list of urls for created spreadsheets (for UI)
-tutors_input = []  # Global variable that stores list of tutors (for UI)
+# urls = []  # Global variable that stores list of urls for created spreadsheets (for UI)
+# tutors_input = []  # Global variable that stores list of tutors (for UI)
 
 dispatcher = Dispatcher()
 
@@ -570,22 +583,22 @@ def index():
     """
     global dispatcher
 
-    # get tutors list from file
-    tutors = []
-    try:
-        tutors = dispatcher.get_tutors()
-    except:
-        flash("FAILED get_tutors()")
+    # # get tutors list from file
+    # tutors = []
+    # try:
+    #     tutors = dispatcher.get_tutors()
+    # except:
+    #     flash("FAILED get_tutors()")
 
     # put tutors into text area
     init_tutors = ""
-    for tutor in tutors:
+    for tutor in dispatcher.tutors:
         init_tutors += tutor + "\n"
     init_tutors = init_tutors[:-1]  # Remove last caret return
 
     return render_template('index.html',
                            init_tutors=init_tutors,
-                           urls=urls)
+                           urls=dispatcher.urls)
 
 
 @app.route('/options', methods=('GET', 'POST'))
@@ -597,12 +610,12 @@ def options():
     """
     global dispatcher
 
-    options = dispatcher.get_options()  ## Read options from file
+    # options = dispatcher.get_options()  # Read options from file
 
     return render_template('options.html',
-                           lower_date=options["lower_date"],
-                           upper_date=options["upper_date"],
-                           first_week=options["first_week"])
+                           lower_date=dispatcher.options["lower_date"],
+                           upper_date=dispatcher.options["upper_date"],
+                           first_week=dispatcher.options["first_week"])
 
 
 @app.route('/edit_options', methods=('GET', 'POST'))
@@ -640,8 +653,9 @@ def authorize():
     """
     global dispatcher
 
-    global tutors_input
+    # global tutors_input
     tutors_input = request.form['tutors_input']
+    dispatcher.tutors = tutors_input.split("\r\n")
 
     # Create flow object that will handle authorization
     # The CLIENT_SECRETS_FILE variable specifies the name of a file that contains the OAuth 2.0 information
@@ -699,20 +713,19 @@ def oauth2callback():
     credentials = flow.credentials
 
     # Creates handles for Google Calendar and Google Spreadsheets
-    service_calendar = build('calendar', 'v3', credentials=credentials)
-    service_sheets = build('sheets', 'v4', credentials=credentials)
+    dispatcher.service_calendar = build('calendar', 'v3', credentials=credentials)
+    dispatcher.service_spreadsheet = build('sheets', 'v4', credentials=credentials)
 
-    # Load options from file
-    options = {}
-    try:
-        options = dispatcher.get_options()
-    except:
-        flash("get_options() FAILED")
+    # # Load options from file
+    # options = {}
+    # try:
+    #     options = dispatcher.get_options()
+    # except:
+    #     flash("get_options() FAILED")
 
     # main job is here
-    list_timetable = dispatcher.list_events_by_guest(service_calendar, options)
-    global urls
-    urls = dispatcher.load_into_spreadsheet(service_sheets, list_timetable)
+    dispatcher.list_events_by_guest()
+    dispatcher.load_into_spreadsheet()
     return redirect(url_for('index'))
 
 
