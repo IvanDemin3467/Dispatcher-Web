@@ -510,5 +510,5 @@ if __name__ == '__main__':
     # can be configured by adding an `entrypoint` to app.yaml.
 
     # app.run(host="0.0.0.0", port=5000, ssl_context=("certificate.pem", "key.pem"))
-    app.run(host="127.0.0.1", port=5000, ssl_context=("certificate.pem", "key.pem"))
+    app.run(host="127.0.0.1", port=443, ssl_context=("certificate.pem", "key.pem"))
     # serve(app, host='127.0.0.1', port=5000)
