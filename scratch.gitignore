@@ -1,0 +1,11 @@
+# IDE files
+.idea
+workspacce.xml
+
+** /venv
+
+# secrets
+git-token.txt
+client_secret.json
+client_secret_desktop.json
+client_secret_web.json
