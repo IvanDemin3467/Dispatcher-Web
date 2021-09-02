@@ -25,7 +25,34 @@
    {% endfor %}
 {% endif %}
 
+<br>
+
+  <table id="data" class="table table-striped">
+    <thead>
+      <tr>
+        <th>1</th>
+        <th>2</th>
+        <th>3</th>
+        <th>4</th>
+        <th>5</th>
+        <th>6</th>
+        <th>7</th>
+        <th>8</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in timetable_list %}
+        <tr>
+            {% for cell in row %}
+                <td>{{ cell }}</td>
+            {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
 {% endblock %}
+
 
 
 

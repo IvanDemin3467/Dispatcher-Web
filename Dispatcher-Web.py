@@ -373,9 +373,18 @@ def index():
         init_tutors += tutor + "\n"
     init_tutors = init_tutors[:-1]  # Remove last caret return
 
+    timetable_list = [["1", "2"], ["3", "4"]]
+    try:
+        timetable_list = dispatcher.list_timetable[0].get_list()
+    except:
+        pass
+    #flash(timetable_list)
+
     return render_template('index.html',
                            init_tutors=init_tutors,
-                           urls=dispatcher.urls)
+                           urls=dispatcher.urls,
+                           timetable_list=timetable_list
+                           )
 
 
 @app.route('/options', methods=('GET', 'POST'))
