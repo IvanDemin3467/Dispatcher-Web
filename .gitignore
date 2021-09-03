@@ -6,6 +6,8 @@ workspacce.xml
 
 # secrets
 git-token.txt
-# client_secret.json
+certificate.pem
+key.pem
+client_secret.json
 client_secret_desktop.json
 client_secret_web.json
