@@ -87,6 +87,7 @@ class Dispatcher():
         # periods_dict translates hour of the day into period of the day
         self.periods_dict = {"08": 1, "09": 2, "10": 2, "11": 3, "12": 3, "13": 4,
                         "14": 4, "15": 5, "16": 5, "17": 6, "18": 7, "19": 7}
+        self.current_timetable = 0
 
 
     def load_into_spreadsheet(self):
@@ -374,8 +375,13 @@ def index():
     init_tutors = init_tutors[:-1]  # Remove last caret return
 
     timetable_list = []
+    timetable_name = ""
     try:
-        timetable_list = dispatcher.list_timetable[0].get_list()
+        for timetable in dispatcher.list_timetable:
+            if timetable.name == dispatcher.current_timetable + "@college.omsu.ru":
+                timetable_list = timetable.get_list()
+                timetable_name = timetable.name
+                break
     except:
         pass
     #flash(timetable_list)
@@ -383,15 +389,16 @@ def index():
     return render_template('index.html',
                            init_tutors=init_tutors,
                            urls=dispatcher.urls,
-                           timetable_list=timetable_list
+                           timetable_list=timetable_list,
+                           timetable_name=timetable_name
                            )
 
 
-@app.route('/<int:post_id>')
-def post(post_id):
-    post = get_post(post_id)
-    return render_template('post.html', post=post)
-
+@app.route('/choose', methods=['GET', 'POST'])
+def choose():
+    global dispatcher
+    dispatcher.current_timetable = request.form['chooseBtn']
+    return redirect('/')
 
 
 @app.route('/options', methods=('GET', 'POST'))

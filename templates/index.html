@@ -19,28 +19,25 @@
 <h4>Расписание для преподавателей:</h4><br>
 <table id="results_table" class="table table-bordered">
     <tbody>
-    {% for row in timetable_list %}
-    <tr>
-        {% for cell in row %}
-        <td>{{ cell }}</td>
-        {% endfor %}
-    </tr>
-    {% endfor %}
-    </tbody>
-</table>
-
     {% for dict_item in urls %}
         {% for key, value in dict_item.items() %}
             <tr>
                 <td><a href={{ value }}>{{ key }}</a></td>
-                <td><form action="{{ url_for('authorize') }}" method="post"></a></td>
+                <td><form action="{{ url_for('choose') }}" method="post">
+                    <button name="chooseBtn" type="submit", value={{ key }}>Show</button>
+                    </form>
+                </td>
             </tr>
         {% endfor %}
     {% endfor %}
+    </tbody>
+    </table>
 {% endif %}
+
 
 <br>
 {% if timetable_list|length > 0 %}
+<h4>{{ timetable_name }}</h4>
 <table id="data" class="table table-bordered">
     <thead>
     <tr>
