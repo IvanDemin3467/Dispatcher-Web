@@ -1,35 +1,49 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <h2>{% block title %} Добро пожаловать! {% endblock %}</h2>
-    <h3>Меня зовут Диспетчер.</h3>
+<h2>{% block title %} Добро пожаловать! {% endblock %}</h2>
+<h3>Меня зовут Диспетчер.</h3>
 
-    <form action="{{ url_for('authorize') }}" method="post">
-        <h4>Введите список преподавателей, каждый с новой строки</h4>
-        Например, example@college.omsu.ru
-        <br>
-        <textarea name="tutors_input" cols="100" rows="5">{{ init_tutors }}</textarea>
-        <br>
-        <input type="submit" value="Отобразить расписание" class="btn btn-primary">
-        <br>
-    </form>
+<form action="{{ url_for('authorize') }}" method="post">
+    <h4>Введите список преподавателей, каждый с новой строки</h4>
+    Например, example@college.omsu.ru
+    <br>
+    <textarea name="tutors_input" cols="100" rows="5">{{ init_tutors }}</textarea>
+    <br>
+    <input type="submit" value="Отобразить расписание" class="btn btn-primary">
+    <br>
+</form>
 
 <br>
 {% if urls|length > 0 %}
-   <h4>Расписание для преподавателей:</h4><br>
-   {% for dict_item in urls %}
-      {% for key, value in dict_item.items() %}
-               <a href={{ value }}>{{ key }}</a>
-               <br>
-      {% endfor %}
-   {% endfor %}
+<h4>Расписание для преподавателей:</h4><br>
+<table id="results_table" class="table table-bordered">
+    <tbody>
+    {% for row in timetable_list %}
+    <tr>
+        {% for cell in row %}
+        <td>{{ cell }}</td>
+        {% endfor %}
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+    {% for dict_item in urls %}
+        {% for key, value in dict_item.items() %}
+            <tr>
+                <td><a href={{ value }}>{{ key }}</a></td>
+                <td><form action="{{ url_for('authorize') }}" method="post"></a></td>
+            </tr>
+        {% endfor %}
+    {% endfor %}
 {% endif %}
 
 <br>
-
-  <table id="data" class="table table-striped">
+{% if timetable_list|length > 0 %}
+<table id="data" class="table table-bordered">
     <thead>
-      <tr>
+    <tr>
         <th>1</th>
         <th>2</th>
         <th>3</th>
@@ -38,18 +52,19 @@
         <th>6</th>
         <th>7</th>
         <th>8</th>
-      </tr>
+    </tr>
     </thead>
     <tbody>
-      {% for row in timetable_list %}
-        <tr>
-            {% for cell in row %}
-                <td>{{ cell }}</td>
-            {% endfor %}
-        </tr>
-      {% endfor %}
+    {% for row in timetable_list %}
+    <tr>
+        {% for cell in row %}
+        <td>{{ cell }}</td>
+        {% endfor %}
+    </tr>
+    {% endfor %}
     </tbody>
-  </table>
+</table>
+{% endif %}
 
 {% endblock %}
 

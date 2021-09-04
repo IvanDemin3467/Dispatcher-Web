@@ -373,7 +373,7 @@ def index():
         init_tutors += tutor + "\n"
     init_tutors = init_tutors[:-1]  # Remove last caret return
 
-    timetable_list = [["1", "2"], ["3", "4"]]
+    timetable_list = []
     try:
         timetable_list = dispatcher.list_timetable[0].get_list()
     except:
@@ -385,6 +385,13 @@ def index():
                            urls=dispatcher.urls,
                            timetable_list=timetable_list
                            )
+
+
+@app.route('/<int:post_id>')
+def post(post_id):
+    post = get_post(post_id)
+    return render_template('post.html', post=post)
+
 
 
 @app.route('/options', methods=('GET', 'POST'))
