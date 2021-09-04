@@ -70,26 +70,6 @@ There are a few setup steps you need to complete before you can use this library
 3.  [Install](http://developers.google.com/api-client-library/python/start/installation) the library.
 4.  To add new tester while app is in test mode -> go to your [Google APIs Console](https://console.cloud.google.com/apis/credentials/consent)
 
-**Features**
-```
-## default behavior - silently run byguest
-list - lists all events in main calendar
-quit - quits program
-del -all - deletes all events in main calendar
-           Also searches through all calendars for given user
-byparam - lists all events in main calendar which are between dates, given in options
-          Also it filters events by name. Choses events that contain give string in name
-          It is implemented to get all events for given group e.g. DAN-909, DTN-809 etc.
-          Also searches all calendars for given user
-          Also accepts cyrillic letters
-          Pretty prints timetable if there is only one group in input
-          Ommits pretty print if there are many groups on input
-          Creates google spreadsheet and loads timetable into it
-          Shows link to the created sheet on a screen
-byguest - Same as byparam, but makes timetable for given guest (tutor)  
-	  Also lists all events in main calendar which are between two dates, given in options
-cal_list - lists calendars for user
-```
 **Functions**
 ```
 def get_options():
@@ -137,9 +117,4 @@ class Timetable
     # timeteble stores all scheduled events (pairs)
     # .print() - prints timetable to the screen
 ```
-**usefull parameters for query**
-```
-Events: list
-calendarId - string from calendarList: List
-singleEvents = True - to expand recurring events into instances. False - to only return single one-off events and instances of recurring events, but not the underlying recurring events themselves. Optional. The default is False. 
-```
+
