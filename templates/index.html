@@ -11,6 +11,10 @@
     <textarea name="tutors_input" cols="100" rows="5">{{ init_tutors }}</textarea>
     <br>
     <input type="submit" value="Отобразить расписание" class="btn btn-primary">
+</form>
+
+<form action="{{ url_for('test_data') }}" method="post">
+    <input type="submit" value="Тест" class="btn btn-secondary">
     <br>
 </form>
 
@@ -39,18 +43,6 @@
 {% if timetable_list|length > 0 %}
 <h4>{{ timetable_name }}</h4>
 <table id="data" class="table table-bordered">
-    <thead>
-    <tr>
-        <th>1</th>
-        <th>2</th>
-        <th>3</th>
-        <th>4</th>
-        <th>5</th>
-        <th>6</th>
-        <th>7</th>
-        <th>8</th>
-    </tr>
-    </thead>
     <tbody>
     {% for row in timetable_list %}
     <tr>

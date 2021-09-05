@@ -7,14 +7,14 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from os import environ
 from werkzeug.exceptions import abort
+import json
+from types import SimpleNamespace
 
 CLIENT_SECRETS_FILE = "client_secret.json"
 
 # This access scope grants read-only access to the authenticated user's Calendar  and Spreadsheets accounts.
 SCOPES = ['https://www.googleapis.com/auth/calendar',
           'https://www.googleapis.com/auth/spreadsheets']
-
-
 
 
 # timetable stores all scheduled events (pairs)
@@ -67,6 +67,10 @@ class Timetable:
                 del complete_list[-9:]  # Do not print empty weeks
         return complete_list
 
+    def toJSON(self):
+        return json.dumps(self, default=lambda o: o.__dict__,
+            sort_keys=True, indent=4)
+
 
 # Dispatcher makes API calls
 class Dispatcher():
@@ -89,6 +93,8 @@ class Dispatcher():
                         "14": 4, "15": 5, "16": 5, "17": 6, "18": 7, "19": 7}
         self.current_timetable = 0
 
+        # testing
+        self.test_routine = False
 
     def load_into_spreadsheet(self):
         """
@@ -243,7 +249,7 @@ class Dispatcher():
             s.close()
         except:
             flash("Error while dealing with file " + path)
-            return self.optionsoptions
+            return self.options
 
         try:  # lower_date
             lower_date = stream[0].rstrip()
@@ -352,6 +358,10 @@ class Dispatcher():
                 break
         return self.calendar_dict
 
+    def toJSON(self):
+        return json.dumps(self, default=lambda o: o.__dict__,
+            sort_keys=True, indent=4)
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dfg90845j6lk4daffodils345m567lk3sdf657lk5op8mn4drum6jf0rt26kb3tyi'
@@ -392,6 +402,59 @@ def index():
                            timetable_list=timetable_list,
                            timetable_name=timetable_name
                            )
+
+
+@app.route('/test_data', methods=['GET', 'POST'])
+def test_data():
+    global dispatcher
+    dispatcher.test_routine = True
+
+    #write_test_data()
+    #flash(dispatcher.list_timetable[0].toJSON())
+
+    dispatcher.list_timetable = []
+    for tutor in dispatcher.tutors:
+        file_name = "test_data_" + tutor + ".txt"
+        try:
+            s = open(file_name, "rt", encoding="utf-8")
+            stream = list(s)
+            s.close()
+            json_string = ""
+            for line in stream:
+                json_string = json_string + line
+            temp_object = json.loads(json_string, object_hook=lambda d: SimpleNamespace(**d)) # load from json
+            # create timetable and load data from temp_object
+            timetable = Timetable(tutor)
+            timetable.name = temp_object.name
+            timetable.timetable = temp_object.timetable
+            dispatcher.list_timetable.append(timetable)
+        except:
+            result = "FAILED reading " + file_name
+            flash(result)
+        else:
+            result = "SUCCESS reading " + file_name
+            flash(result)
+
+    return redirect(url_for('index'))
+
+def write_test_data():
+    global dispatcher
+
+    #frozen = jsonpickle.encode(dispatcher.list_timetable[0].timetable)
+    #flash(dispatcher.list_timetable[0].timetable)
+
+    for timetable in dispatcher.list_timetable:
+        file_name = "test_data_" + timetable.name + ".txt"
+        try:
+            s = open(file_name, "wt", encoding="utf-8")
+            s.write(timetable.toJSON())
+            s.close()
+        except:
+            result = "FAILED writing " + file_name
+            flash(result)
+        else:
+            result = "SUCCESS writing " + file_name
+            flash(result)
 
 
 @app.route('/choose', methods=['GET', 'POST'])
@@ -522,7 +585,8 @@ def oauth2callback():
     #     flash("get_options() FAILED")
 
     # main job is here
-    dispatcher.list_events_by_guest()
+    if not dispatcher.test_routine:
+        dispatcher.list_events_by_guest()
     dispatcher.load_into_spreadsheet()
     return redirect(url_for('index'))
 
