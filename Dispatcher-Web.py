@@ -1,12 +1,12 @@
-import google.oauth2.credentials
+#import google.oauth2.credentials
 from datetime import datetime
 from flask import Flask, render_template, request, url_for, flash, redirect, session
-from google_auth_oauthlib.flow import *
+#from google_auth_oauthlib.flow import *
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
+#from googleapiclient.errors import HttpError
 from os import environ
-from werkzeug.exceptions import abort
+#from werkzeug.exceptions import abort
 import json
 from types import SimpleNamespace
 
@@ -410,7 +410,6 @@ def test_data():
     dispatcher.test_routine = True
 
     #write_test_data()
-    #flash(dispatcher.list_timetable[0].toJSON())
 
     dispatcher.list_timetable = []
     for tutor in dispatcher.tutors:
@@ -587,6 +586,8 @@ def oauth2callback():
     # main job is here
     if not dispatcher.test_routine:
         dispatcher.list_events_by_guest()
+    else:
+        dispatcher.test_routine = False
     dispatcher.load_into_spreadsheet()
     return redirect(url_for('index'))
 
